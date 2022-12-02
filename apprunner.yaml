@@ -3,9 +3,10 @@ runtime: python3
 build:
   commands:
     build:
+      - pip install "fastapi[all]"
       - pip install -r requirements.txt
 run:
-  command: python main.py
+  command: uvicorn main:app
   env:
     - name: DEBUGGING
       value: True

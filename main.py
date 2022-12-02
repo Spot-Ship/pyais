@@ -1,4 +1,5 @@
 from shutil import ExecError
+from fastapi import FastAPI
 import socket
 import ssl
 import platform
@@ -14,6 +15,12 @@ sslContext.verify_mode  = ssl.CERT_REQUIRED
 # Check for OS X platform
 import certifi
 import os
+
+app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 
 debugging = os.environ.get("DEBUGGING", True)
 supportedAISmsgTypes = ['1','2','3','4','5','18']
