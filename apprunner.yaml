@@ -10,3 +10,5 @@ run:
   env:
     - name: DEBUGGING
       value: True
+  network:
+    port: 8000
