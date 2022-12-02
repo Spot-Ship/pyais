@@ -7,19 +7,27 @@ import time
 from pyais import decode
 import json
 import sys, traceback
+import boto3
 # Context creation
 sslContext              = ssl.SSLContext()
 sslContext.verify_mode  = ssl.CERT_REQUIRED
 # Check for OS X platform
 import certifi
 import os
-import boto3
-from botocore.exceptions import ClientError
+
+debugging = os.environ.get("DEBUGGING", False)
+
+def debug(msg):
+    if(debugging): 
+        print(msg)
 
 def put_kinesis(msg_body):
+    """
+    Sends a message to Kinesis.
+    """
     import json
     import boto3
-    from models import Orbcomm_Vessels
+    from myapp.models import Orbcomm_Vessels
     from django.http import Http404
     from django.shortcuts import get_object_or_404
     
@@ -55,8 +63,8 @@ def stream_message(msg_body):
     """
     if str(msg_body['msg_type']) not in ['1','2','3','4','5','18']:
         return False
-
-    print(msg_body['msg_type'])
+    debug(msg_body['msg_type'])
+    # TODO Refactor
     try:
         put_response = put_kinesis(msg_body)
     except Exception as err:
@@ -99,7 +107,7 @@ def stream_message(msg_body):
                         print('try to decode last item')        
                     put_response = put_kinesis(msg_body)
                 except Exception as err:
-                    print("line number 37")
+                    print("line number 107")
                     print(str(msg_body))
                     print(err)
             else:
@@ -109,139 +117,6 @@ def stream_message(msg_body):
     else:
         return put_response
 
-
-def response_object(msg_object):
-    import pytz
-    import datetime as dt
-    from dateutil.relativedelta import relativedelta
-    from models import Orbcomm_Vessels, Orbcomm_Positions
-    from django.utils import timezone
-    response = {}
-
-
-    if msg_object['msg_type'] == 1 or msg_object['msg_type'] == 2 or msg_object['msg_type'] == 3 or msg_object['msg_type'] == 21 or msg_object['msg_type'] == 19:
-        try:
-            print (f"69 whole msg 1, 2, 3, 19, 21 object {msg_object}")
-            vessel, created = Orbcomm_Vessels.objects.get_or_create(mmsi=msg_object["mmsi"])
-            if vessel.vessel_type:
-                if vessel.vessel_type in ['AntiPollutionEquipment', 'DivingOps', 'DredgingOrUnderwaterOps', 'Fishing', 'HSC', 'HSC_HazardousCategory_A', 'HSC_HazardousCategory_B', 'HSC_HazardousCategory_C', \
-                    'HSC_HazardousCategory_D', 'HSC_NoAdditionalInformation', 'HSC_Reserved', 'LawEnforcement', 'MedicalTransport', 'MilitaryOps', 'NonCombatShip',  \
-                    'Passenger', 'Passenger_HazardousCategory_A', 'Passenger_HazardousCategory_C', 'Passenger_HazardousCategory_D', 'Passenger_NoAdditionalInformation', \
-                    'Passenger_Reserved', 'PleasureCraft', 'Reserved', 'Sailing', 'SearchAndRescueVessel', 'SPARE', 'WIG', 'WIG_HazardousCategory_B', 'WIG_HazardousCategory_C', 'WIG_Reserved']:
-                    return
-            position = Orbcomm_Positions()
-            position.lon = msg_object.get('lon')
-            position.lat = msg_object.get('lat')
-            position.course = msg_object.get('course')
-            position.heading = msg_object.get('heading')
-
-            position.status = str(msg_object.get('status')).replace('NavigationStatus.', '')
-
-            position.accuracy = msg_object.get('accuracy')
-    
-            position.speed =msg_object.get('speed')
-
-            vessel.position_updated_at = timezone.now()
-            position.mmsi = vessel
-            try:
-                print(f"92 type 1, 2, 3, 19, 21 POSITION {position}")
-                print(f"93 type 1, 2, 3, 19, 21 VESSEL {vessel}")
-                position.save()
-                vessel.save()
-            except Exception as e:
-                print(f"97 ERROR: {e}")
-                raise Exception
-            print(f"98 transaction committed {vessel}\n\n")
-        except Exception:
-            full_traceback = traceback.format_exc()
-            print(full_traceback)
-            raise Exception
- 
-    
-    # elif msg_object['msg_type'] == 18:
-    #     try:
-    #         print (f"104 whole msg 18 object {msg_object}")
-    #         vessel, created = Orbcomm_Vessels.objects.get_or_create(mmsi=msg_object["mmsi"])
-
-    #         if vessel.vessel_type:
-    #             if vessel.vessel_type in ['AntiPollutionEquipment', 'DivingOps', 'DredgingOrUnderwaterOps', 'Fishing', 'HSC', 'HSC_HazardousCategory_A', 'HSC_HazardousCategory_B', 'HSC_HazardousCategory_C', \
-    #                 'HSC_HazardousCategory_D', 'HSC_NoAdditionalInformation', 'HSC_Reserved', 'LawEnforcement', 'MedicalTransport', 'MilitaryOps', 'NonCombatShip',  \
-    #                 'Passenger', 'Passenger_HazardousCategory_A', 'Passenger_HazardousCategory_C', 'Passenger_HazardousCategory_D', 'Passenger_NoAdditionalInformation', \
-    #                 'Passenger_Reserved', 'PleasureCraft', 'Reserved', 'Sailing', 'SearchAndRescueVessel', 'SPARE', 'WIG', 'WIG_HazardousCategory_B', 'WIG_HazardousCategory_C', 'WIG_Reserved']:
-    #                 return
-    #         position = Orbcomm_Positions()
-    #         position.lon = msg_object.get('lon')
-    #         position.lat = msg_object.get('lat')
-    #         position.course = msg_object.get('course')
-    #         position.heading = msg_object.get('heading')
-            
-    #         vessel.position_updated_at = timezone.now()
-    #         position.mmsi = vessel
-    #         try:
-    #             print(f"124 type 18 POSITION {position}")
-    #             print(f"125 type 18 VESSEL {vessel}\n\n")
-    #             position.save()
-    #             vessel.save()
-    #         except Exception as e:
-    #             print(f"129 ERROR: {e}")
-    #             raise Exception
-    #         print(f"130 transaction committed {vessel}")
-    #     except Exception:
-    #         full_traceback = traceback.format_exc()
-    #         print(full_traceback)
-    #         raise Exception
- 
-
-                    
-    elif msg_object['msg_type'] == 5:
-        
-        try:
-            print (f"140 whole msg 5 object {msg_object}")
-            try:
-                if msg_object['month']== 0 or msg_object['day']==0 or msg_object['hour'] > 23 or msg_object['day'] > 31 or msg_object['minute'] > 60:
-                    eta_date = timezone.now() + relativedelta(months=msg_object['month'], days=msg_object['day'],hours=msg_object['hour'], minutes=msg_object['minute'] )
-                else:    
-                    eta_date = dt.datetime(dt.date.today().year, msg_object['month'], msg_object['day'], msg_object['hour'], msg_object['minute'], tzinfo=pytz.UTC)
-                    if eta_date < timezone.now() - relativedelta(months=1):
-                        eta_date = eta_date + relativedelta(years=+1)
-            except Exception as e:
-                eta_date = None
-                print (f" 150 {e}")
-                raise Exception
-            try:
-                vessel, created = Orbcomm_Vessels.objects.update_or_create( mmsi=msg_object['mmsi'], defaults= { \
-                'mmsi': msg_object['mmsi'], \
-                'imo': msg_object['imo'],  \
-                'vessel_name': msg_object['shipname'], \
-                'vessel_callsign': msg_object['callsign'], \
-                'vessel_type': str(msg_object['ship_type']), \
-                'destination': msg_object['destination'], \
-                'eta': eta_date, \
-                'draught': msg_object['draught'], \
-                'to_bow': msg_object['to_bow'], \
-                'to_starboard': msg_object['to_starboard'], \
-                'to_stern': msg_object['to_stern'], \
-                'to_port': msg_object['to_port']
-                })
-                
-                print(f"165 transaction committed {vessel}")
-                print(f"167 type 5 VESSEL {vessel}\n\n")
-                vessel.save()
-
-            except Exception as e:
-                eta_date = None
-                print(f" Exception 173 {e}")
-                raise Exception
-        except Exception:
-            full_traceback = traceback.format_exc()
-            print(full_traceback)
-            raise Exception
-            
-    else:
-        print(f"176 THE LAST RESPONSE! {response}\n\n")
-        print(f"177 message is = {msg_object}")
-        pass
-    return response
 
 def checksum(sentence):
     import re
@@ -254,12 +129,14 @@ def checksum(sentence):
     result = str(hex(calc_cksum)).split("x")[1]
     return result
 
+
 first_part = ""
 parts = []
 decoded_message = None
 def is_2_part(signal):
     if 'g:1-2-' in signal:
         return True
+
 
 def create_multi_part(parts):
     decoded_parts = []
@@ -272,8 +149,8 @@ def create_multi_part(parts):
     return decoded_parts
 
 
-
 while True:
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # Load the CA certificates used for validating the peer's certificate
     sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
     # Create an SSLSocket                                   
@@ -292,61 +169,59 @@ while True:
     print(serverCertificate) 
     user_name= "SSEH_Lss"
     password= "tpWB3UkPnoF2"
-    nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,user_name,password)
-    chksum_string = nmea_string[1:]
-    package = "{}{}\r\n".format(nmea_string, checksum(chksum_string))
-    b = bytearray()
-    b.extend(package.encode('utf-8'))
- 
-    secureClientSocket.send(b)
+    try:
+        nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,user_name,password)
+        chksum_string = nmea_string[1:]
+        package = "{}{}\r\n".format(nmea_string, checksum(chksum_string))
+        b = bytearray()
+        b.extend(package.encode('utf-8'))
+        secureClientSocket.send(b)
+    except Exception as e:
+        print('line 177')
+        print(e)
+        continue
     try:
         while True:
             try:
                 row = secureClientSocket.recv(4096)
-                print(f"1. raw {row}")
+                debug(f"1. raw {row}")
                 if row !="":
                     row_to_string = row.decode("utf-8") 
-                    print(f"2. string {row_to_string}")
+                    debug(f"2. string {row_to_string}")
                     if is_2_part(row_to_string):
                         first_part = row_to_string
-                        print (first_part)
-                        pass
-                    if first_part == "":
-                        data = row_to_string.split("!")
-                        string_to_decode = '!' + str(data[1])
-                        if string_to_decode.find("AIVDM") != -1:
-                            decoded_message = decode(string_to_decode).asdict()
-                            print (f"decoded_message single {decoded_message}")
-                    if first_part !="" and 'g:2-2-' in row_to_string:
-                        print(f"first part {first_part}")
-                        print(f"second part {row_to_string}")
-                        parts = [first_part, row_to_string]
-                        multipart = create_multi_part(parts)
-                        print(f"multipart {multipart}")
-                        decoded_message = decode(*multipart).asdict()
-                        print (f"decoded_message multi {decoded_message}")
-                        first_part = ""
-                        print(f" reset first part{first_part}")
-                    print (f"3. {decoded_message}\n")
-                    if decoded_message is not None:
-                        try:
-                            print("RIGHT BEFORE RESPONSE OBJECT")
-                            response_object(decoded_message)
-                            try:  
+                        debug(first_part)
+                    else:
+                        if first_part == "":
+                            data = row_to_string.split("!")
+                            string_to_decode = '!' + str(data[1])
+                            if string_to_decode.find("AIVDM") != -1:
+                                decoded_message = decode(string_to_decode).asdict()
+                                debug(f"decoded_message single {decoded_message}")
+                        if first_part !="" and 'g:2-2-' in row_to_string:
+                            debug(f"first part {first_part}")
+                            debug(f"second part {row_to_string}")
+                            parts = [first_part, row_to_string]
+                            multipart = create_multi_part(parts)
+                            debug(f"multipart {multipart}")
+                            decoded_message = decode(*multipart).asdict()
+                            debug(f"decoded_message multi {decoded_message}")
+                            first_part = ""
+                            debug(f" reset first part{first_part}")
+                            debug('decoded msg')
+                            debug(f"3. {decoded_message}\n")
+                        if decoded_message is not None:
+                            try:
+                                debug("RIGHT BEFORE RESPONSE OBJECT line 212")
                                 stream_response = stream_message(decoded_message)
-                                print(stream_response)
+                                debug(stream_response)
                             except Exception as error:
-                                print("line number 281")
+                                print("line number 216")
                                 print(error)
-                                raise Exception
-                        except Exception as error:
-                            print("line number 285")
-                            print(error)
-                            raise Exception
-            except IndexError as e:
+            except Exception as e:
                 if data[0] == "":
-                    raise
-
+                    print('line 220')
+                    print(e)
     except Exception as error:
-        print("line number 189")
+        print("line number 224")
         print(error)
