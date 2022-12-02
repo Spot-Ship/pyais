@@ -15,7 +15,7 @@ sslContext.verify_mode  = ssl.CERT_REQUIRED
 import certifi
 import os
 
-debugging = os.environ.get("DEBUGGING", False)
+debugging = os.environ.get("DEBUGGING", True)
 supportedAISmsgTypes = ['1','2','3','4','5','18']
 
 def debug(msg):
