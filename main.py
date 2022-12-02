@@ -92,6 +92,7 @@ def stream_message(msg_body):
                 except Exception as err:
                     print(str(msg_body))
                     print(err)
+                    raise Exception
             else:
                 return put_response
         else:
@@ -197,8 +198,11 @@ while True:
                                 debug(stream_response)
                             except Exception as error:
                                 print(error)
+                                raise Exception
             except Exception as e:
                 if data[0] == "":
                     print(e)
+                raise Exception
     except Exception as error:
         print(error)
+        raise Exception
