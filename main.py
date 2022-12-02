@@ -16,6 +16,7 @@ import certifi
 import os
 
 debugging = os.environ.get("DEBUGGING", False)
+supportedAISmsgTypes = ['1','2','3','4','5','18']
 
 def debug(msg):
     if(debugging): 
@@ -27,41 +28,23 @@ def put_kinesis(msg_body):
     """
     import json
     import boto3
-    from myapp.models import Orbcomm_Vessels
-    from django.http import Http404
-    from django.shortcuts import get_object_or_404
     
     AWS_REGION = 'eu-west-2'
     kinesis_client = boto3.client("kinesis", region_name=AWS_REGION)
     hashkey = str(msg_body['msg_type'])
-    try:
-        vessel = get_object_or_404(Orbcomm_Vessels, mmsi=msg_body["mmsi"]) 
-    except Http404:
-        put_response = kinesis_client.put_record(
-                StreamName="SundryAIS",
-                Data=json.dumps(msg_body),
-                PartitionKey=hashkey)
-        return put_response
-    if vessel.is_ais_enabled == 1:
-        stream_name = "ais_msg_type_{}".format(str(msg_body['msg_type']))
-        put_response = kinesis_client.put_record(
-                StreamName=stream_name,
-                Data=json.dumps(msg_body),
-                PartitionKey=hashkey)
-        return put_response
-    else:
-        put_response = kinesis_client.put_record(
-                StreamName="HistoricalAIS",
-                Data=json.dumps(msg_body),
-                PartitionKey=hashkey)
-        return put_response
+    stream_name = "ais_msg_type_{}".format(str(msg_body['msg_type']))
+    put_response = kinesis_client.put_record(
+        StreamName=stream_name,
+        Data=json.dumps(msg_body),
+        PartitionKey=hashkey)
+    return put_response
 
 
 def stream_message(msg_body):
     """
     Sends a message to the specified queue.
     """
-    if str(msg_body['msg_type']) not in ['1','2','3','4','5','18']:
+    if str(msg_body['msg_type']) not in supportedAISmsgTypes:
         return False
     debug(msg_body['msg_type'])
     # TODO Refactor
@@ -107,7 +90,6 @@ def stream_message(msg_body):
                         print('try to decode last item')        
                     put_response = put_kinesis(msg_body)
                 except Exception as err:
-                    print("line number 107")
                     print(str(msg_body))
                     print(err)
             else:
@@ -177,7 +159,6 @@ while True:
         b.extend(package.encode('utf-8'))
         secureClientSocket.send(b)
     except Exception as e:
-        print('line 177')
         print(e)
         continue
     try:
@@ -212,16 +193,12 @@ while True:
                             debug(f"3. {decoded_message}\n")
                         if decoded_message is not None:
                             try:
-                                debug("RIGHT BEFORE RESPONSE OBJECT line 212")
                                 stream_response = stream_message(decoded_message)
                                 debug(stream_response)
                             except Exception as error:
-                                print("line number 216")
                                 print(error)
             except Exception as e:
                 if data[0] == "":
-                    print('line 220')
                     print(e)
     except Exception as error:
-        print("line number 224")
         print(error)
