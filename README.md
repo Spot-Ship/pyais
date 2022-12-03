@@ -32,6 +32,11 @@ pipenv run python app.py
 
 ## AIS Message types
 
+### Useful links
+
+- [What is AIS?](https://www.marineinsight.com/marine-navigation/automatic-identification-system-ais-integrating-and-identifying-marine-communication-channels/)
+- [Message types](https://arundaleais.github.io/docs/ais/ais_message_types.html)
+
 ### Type 1
 
 #### Example
@@ -77,7 +82,28 @@ pipenv run python app.py
 #### Example
 
 ```json
-{'msg_type': 18, 'repeat': 0, 'mmsi': 316044687, 'reserved_1': 0, 'speed': 0.0, 'accuracy': True, 'lon': -122.499012, 'lat': 37.972215, 'course': 283.9, 'heading': 511, 'second': 20, 'reserved_2': 0, 'cs': True, 'display': False, 'dsc': True, 'band': True, 'msg22': False, 'assigned': False, 'raim': True, 'radio': 917510}
+{
+    'msg_type': 18,
+    'repeat': 0,
+    'mmsi': 316044687,
+    'reserved_1': 0,
+    'speed': 0.0,
+    'accuracy': True,
+    'lon': -122.499012,
+    'lat': 37.972215,
+    'course': 283.9,
+    'heading': 511,
+    'second': 20,
+    'reserved_2': 0,
+    'cs': True,
+    'display': False,
+    'dsc': True,
+    'band': True,
+    'msg22': False,
+    'assigned': False,
+    'raim': True,
+    'radio': 917510
+}
 ```
 
 ---
