@@ -32,9 +32,19 @@ pipenv run python app.py
 
 ## CICD
 
-[Setup from these instructions](https://www.awstutorials.cloud/post/tutorials/ecs-deploy-github-actions/).
+Uses Github actions to push to ECR and deploy the service on AWS Fargate. The workflow is in `.github/workflows/aws.yml`
 
-Uses `Github` IAM user & `orbcomm-ingester`ECR repo.
+This is started automatically on a successful pr merge into `main` branch.
+
+_N.B._ can be started manually in the github actions console by clicking run workflow and choosing the branch to use.
+
+You can edit the task definition to edit the service configuration in `taskdef.json`.
+
+[Instructions used to setup](https://www.awstutorials.cloud/post/tutorials/ecs-deploy-github-actions/).
+
+Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
+
+---
 
 ## AIS Message types
 
