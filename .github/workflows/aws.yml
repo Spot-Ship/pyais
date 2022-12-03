@@ -35,11 +35,6 @@ on:
 name: Deploy to Amazon ECS
 
 jobs:
-  source:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "event name is:" ${{ github.event_name }}
-      - run: echo "event type is:" ${{ github.event.action }}
   deploy:
     name: Deploy
     if: ${{ github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch' }}
