@@ -137,7 +137,7 @@ while True:
                     row_to_string = row.decode("utf-8")
                     if row_to_string !="":
                         logging.debug(f"Raw - {row}")
-                        logging.debug(f"Decoded - {row_to_string}")
+                        logging.debug(f"Decoded utf-8 - {row_to_string}")
                         # Check for multipart msgs
                         if 'g:1-2-' in row_to_string:
                             first_part = row_to_string
@@ -151,7 +151,7 @@ while True:
                                     string_to_decode = '!' + row_to_string
                                 if string_to_decode.find("AIVDM") != -1:
                                     decoded_message = decode(string_to_decode).asdict()
-                                    logging.debug(f"Decoded First - {decoded_message}")
+                                    logging.debug(f"AIS Decoded First - {decoded_message}")
                             # Check that we are dealing with the second part of a multipart msg.
                             # N.B. This solution only deals with 2 part msgs atm.
                             if first_part !="" and 'g:2-2-' in row_to_string:
@@ -161,7 +161,7 @@ while True:
                                 multipart = create_multi_part(parts)
                                 logging.debug(f"Raw Multipart - {multipart}")
                                 decoded_message = decode(*multipart).asdict()
-                                logging.debug(f"Decoded Multipart - {decoded_message}")
+                                logging.debug(f"AIS Decoded Multipart - {decoded_message}")
                                 first_part = ""
                             if decoded_message is not None:
                                 if str(decoded_message['msg_type']) in supportedAISmsgTypes:

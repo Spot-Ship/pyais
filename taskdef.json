@@ -2,14 +2,14 @@
   "containerDefinitions": [
     {
       "name": "orbcomm-ingester",
-      "image": "spotship/orbcomm-ingester:latest",
+      "image": "756776684591.dkr.ecr.eu-west-2.amazonaws.com/orbcomm-ingester",
       "cpu": 1024,
       "memory": 2048,
       "links": [],
       "portMappings": [],
       "essential": true,
-      "entryPoint": ["sh", "-c"],
-      "command": ["echo", "Orbcomm Ingester Running"],
+      "entryPoint": null,
+      "command": null,
       "environment": [],
       "environmentFiles": [],
       "mountPoints": [],
