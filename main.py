@@ -16,7 +16,7 @@ import certifi
 import os
 import logging
 
-logLevel = os.environ.get("LOGLEVEL", logging.DEBUG)
+logLevel = os.environ.get("LOGLEVEL", logging.INFO)
 logfmt = '[%(levelname)s] %(asctime)s - %(message)s'
 logging.basicConfig(level=logLevel, format=logfmt)
 
@@ -44,9 +44,7 @@ def stream_message(msg_body):
     """
     Filters & preps for Kinesis.
     """
-    if str(msg_body['msg_type']) not in supportedAISmsgTypes:
-        return False
-    logging.debug(msg_body['msg_type'])
+    logging.info(msg_body)
     try:
         msg_body['data'] = msg_body['data'].decode("utf-8")
     except:
@@ -159,12 +157,13 @@ while True:
                             logging.debug(f"Decoded Multipart - {decoded_message}")
                             first_part = ""
                         if decoded_message is not None:
-                            try:
-                                stream_response = stream_message(decoded_message)
-                                logging.debug(stream_response)
-                            except Exception as error:
-                                logging.error(error)
-                                raise Exception
+                            if str(decoded_message['msg_type']) in supportedAISmsgTypes:
+                                try:
+                                    stream_response = stream_message(decoded_message)
+                                    logging.debug(stream_response)
+                                except Exception as error:
+                                    logging.error(error)
+                                    raise Exception
             except Exception as error:
                 logging.error(error)
                 raise Exception
