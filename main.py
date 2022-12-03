@@ -14,19 +14,16 @@ sslContext.verify_mode  = ssl.CERT_REQUIRED
 # Check for OS X platform
 import certifi
 import os
+import logging
 
-debugging = os.environ.get("DEBUGGING", True)
+logLevel = os.environ.get("LOGLEVEL", logging.DEBUG)
+logfmt = '[%(levelname)s] %(asctime)s - %(message)s'
+logging.basicConfig(level=logLevel, format=logfmt)
+
 supportedAISmsgTypes = ['1','2','3','4','5','18']
 
 AWS_REGION = 'eu-west-2'
 kinesis_client = boto3.client("kinesis", region_name=AWS_REGION)
-
-def debug(msg):
-    """
-    Only prints on debug mode
-    """
-    if(debugging): 
-        print(msg)
 
 def put_kinesis(msg_body):
     """
@@ -49,7 +46,7 @@ def stream_message(msg_body):
     """
     if str(msg_body['msg_type']) not in supportedAISmsgTypes:
         return False
-    debug(msg_body['msg_type'])
+    logging.debug(msg_body['msg_type'])
     try:
         msg_body['data'] = msg_body['data'].decode("utf-8")
     except:
@@ -65,7 +62,7 @@ def stream_message(msg_body):
     try:
         put_response = put_kinesis(msg_body)
     except Exception as err:
-        print(f"ERROR | Kinesis | Error Msg: {err} | Processing: {str(msg_body)}")
+        logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
         raise Exception
     else:
         return put_response
@@ -81,10 +78,6 @@ def checksum(sentence):
         calc_cksum ^= ord(s)
     result = str(hex(calc_cksum)).split("x")[1]
     return result
-
-def is_2_part(signal):
-    if 'g:1-2-' in signal:
-        return True
 
 
 def create_multi_part(parts):
@@ -105,23 +98,22 @@ while True:
     """
     Connect via SSL to Orbcomm websocket and decode msgs to fire to Kinesis streams
     """
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    logging.info('Orbcomm Ingester Scrip Starting ...')
     # Load the CA certificates used for validating the peer's certificate
     sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
     # Create an SSLSocket                                   
     clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
     secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False)
     # Only connect, no handshake
-    t1 = time.time()
-    print("Time taken to establish the connection:%2.3f"%(time.time() - t1))
+    logging.debug('Established connection')
     # Explicit handshake
-    t3 = time.time()
     secureClientSocket.do_handshake()
-    print("Time taken for SSL handshake:%2.3f"%(time.time() - t3))
+    logging.debug("Complete SSL handshake")
     # Get the certificate of the server and print
     serverCertificate = secureClientSocket.getpeercert()
-    print("Certificate obtained from the server:")
-    print(serverCertificate) 
+    logging.debug("Certificate obtained from the server:")
+    logging.debug(serverCertificate)
+    # TODO move these to envVar
     user_name= "SSEH_Lss"
     password= "tpWB3UkPnoF2"
     try:
@@ -132,7 +124,7 @@ while True:
         b.extend(package.encode('utf-8'))
         secureClientSocket.send(b)
     except Exception as e:
-        print(e)
+        logging.warning(e)
         continue
     first_part = ""
     parts = []
@@ -142,10 +134,10 @@ while True:
             try:
                 row = secureClientSocket.recv(4096)
                 if row !="":
-                    debug(f"Raw | {row}")
+                    logging.debug(f"Raw - {row}")
                     row_to_string = row.decode("utf-8") 
-                    debug(f"Decoded | {row_to_string}")
-                    if is_2_part(row_to_string):
+                    logging.debug(f"Decoded - {row_to_string}")
+                    if 'g:1-2-' in row_to_string:
                         first_part = row_to_string
                     else:
                         if first_part == "":
@@ -156,26 +148,26 @@ while True:
                                 string_to_decode = '!' + row_to_string
                             if string_to_decode.find("AIVDM") != -1:
                                 decoded_message = decode(string_to_decode).asdict()
-                                debug(f"Decoded First | {decoded_message}")
+                                logging.debug(f"Decoded First - {decoded_message}")
                         if first_part !="" and 'g:2-2-' in row_to_string:
-                            debug(f"First part  | {first_part}")
-                            debug(f"Second part | {row_to_string}")
+                            logging.debug(f"First part  - {first_part}")
+                            logging.debug(f"Second part - {row_to_string}")
                             parts = [first_part, row_to_string]
                             multipart = create_multi_part(parts)
-                            debug(f"Raw Multipart | {multipart}")
+                            logging.debug(f"Raw Multipart - {multipart}")
                             decoded_message = decode(*multipart).asdict()
-                            debug(f"Decoded Multipart | {decoded_message}")
+                            logging.debug(f"Decoded Multipart - {decoded_message}")
                             first_part = ""
                         if decoded_message is not None:
                             try:
                                 stream_response = stream_message(decoded_message)
-                                debug(stream_response)
+                                logging.debug(stream_response)
                             except Exception as error:
-                                print(f"ERROR | {error}")
+                                logging.error(error)
                                 raise Exception
             except Exception as error:
-                print(error)
+                logging.error(error)
                 raise Exception
     except Exception as error:
-        print(error)
+        logging.error(error)
         raise Exception
