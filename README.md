@@ -12,11 +12,15 @@ I --- K
 K --> R
 ```
 
-## Run Locally
+## Running Locally
+
+🚨 **We only pay for 1 Orbcomm Stream reader, so if you run locally it cuts off our main reader in AWS.** 🚨
+
+If your local stream is getting no messages then it is likely another service is connected to the stream.
 
 ### Via Docker [RECOMMENDED]
 
-_N.B_ Make sure to have docker installed and setup locally first! [Instructions](https://www.docker.com/get-started/)
+ℹ️ Make sure to have docker installed and setup locally first! [Instructions](https://www.docker.com/get-started/)
 
 ```sh
 docker build -t spotship/orbcomm-ingester:latest .
