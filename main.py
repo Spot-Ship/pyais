@@ -13,7 +13,7 @@ import os
 import logging
 
 # Context creation
-sslContext              = ssl.SSLContext()
+sslContext              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 sslContext.verify_mode  = ssl.CERT_REQUIRED
 
 # Setup logger - https://docs.python.org/3/library/logging.html#levels
@@ -100,9 +100,10 @@ while True:
     logging.info('Orbcomm Ingester Script Starting ...')
     # Load the CA certificates used for validating the peer's certificate.
     sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
+    sslContext.check_hostname = False
     # Create an SSLSocket.                         
     clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
-    secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False)
+    secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
     logging.debug('Established connection')
     # Explicit handshake.

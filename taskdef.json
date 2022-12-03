@@ -3,7 +3,8 @@
     {
       "name": "orbcomm-ingester",
       "image": "spotship/orbcomm-ingester:latest",
-      "cpu": 0,
+      "cpu": 1024,
+      "memory": 2048,
       "links": [],
       "portMappings": [],
       "essential": true,
@@ -23,6 +24,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
+          "awslogs-create-group": "true",
           "awslogs-group": "/ecs/orbcomm-ingester",
           "awslogs-region": "eu-west-2",
           "awslogs-stream-prefix": "ecs"
