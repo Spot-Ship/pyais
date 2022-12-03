@@ -1,0 +1,86 @@
+{
+  "taskDefinitionArn": "arn:aws:ecs:eu-west-2:756776684591:task-definition/orbcomm-ingester:2",
+  "containerDefinitions": [
+    {
+      "name": "orbcomm-ingester",
+      "image": "spotship/orbcomm-ingester:latest",
+      "cpu": 0,
+      "links": [],
+      "portMappings": [],
+      "essential": true,
+      "entryPoint": ["sh", "-c"],
+      "command": ["echo", "Orbcomm Ingester Running"],
+      "environment": [],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [],
+      "dnsServers": [],
+      "dnsSearchDomains": [],
+      "extraHosts": [],
+      "dockerSecurityOptions": [],
+      "dockerLabels": {},
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/orbcomm-ingester",
+          "awslogs-region": "eu-west-2",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ],
+  "family": "orbcomm-ingester",
+  "taskRoleArn": "arn:aws:iam::756776684591:role/OrbcommIngester",
+  "executionRoleArn": "arn:aws:iam::756776684591:role/OrbcommIngester",
+  "networkMode": "awsvpc",
+  "revision": 2,
+  "volumes": [],
+  "status": "ACTIVE",
+  "requiresAttributes": [
+    {
+      "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+    },
+    {
+      "name": "ecs.capability.execution-role-awslogs"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.17"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.task-iam-role"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+    },
+    {
+      "name": "ecs.capability.task-eni"
+    }
+  ],
+  "placementConstraints": [],
+  "compatibilities": ["EC2", "FARGATE"],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX"
+  },
+  "registeredAt": "2022-12-03T12:51:38.135Z",
+  "registeredBy": "arn:aws:iam::756776684591:user/Mark.Hardwick",
+  "tags": [
+    {
+      "key": "ecs:taskDefinition:createdFrom",
+      "value": "ecs-console-v2"
+    },
+    {
+      "key": "ecs:taskDefinition:stackId",
+      "value": "arn:aws:cloudformation:eu-west-2:756776684591:stack/ECS-Console-V2-TaskDefinition-818fef46-20f3-4600-9192-873e654683b0/36a81b40-7309-11ed-837e-02695fea9c10"
+    }
+  ]
+}

@@ -30,6 +30,12 @@ pipenv install
 pipenv run python app.py
 ```
 
+## CICD
+
+[Setup from these instructions](https://www.awstutorials.cloud/post/tutorials/ecs-deploy-github-actions/).
+
+Uses `Github` IAM user & `orbcomm-ingester`ECR repo.
+
 ## AIS Message types
 
 ### Useful links

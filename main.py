@@ -8,15 +8,16 @@ from pyais import decode
 import json
 import sys, traceback
 import boto3
-# Context creation
-sslContext              = ssl.SSLContext()
-sslContext.verify_mode  = ssl.CERT_REQUIRED
-# Check for OS X platform
 import certifi
 import os
 import logging
 
-logLevel = os.environ.get("LOGLEVEL", logging.INFO)
+# Context creation
+sslContext              = ssl.SSLContext()
+sslContext.verify_mode  = ssl.CERT_REQUIRED
+
+# Setup logger - https://docs.python.org/3/library/logging.html#levels
+logLevel = os.environ.get("LOGLEVEL", logging.DEBUG)
 logfmt = '[%(levelname)s] %(asctime)s - %(message)s'
 logging.basicConfig(level=logLevel, format=logfmt)
 
@@ -44,7 +45,6 @@ def stream_message(msg_body):
     """
     Filters & preps for Kinesis.
     """
-    logging.info(msg_body)
     try:
         msg_body['data'] = msg_body['data'].decode("utf-8")
     except:
@@ -58,6 +58,7 @@ def stream_message(msg_body):
     except:
         pass
     try:
+        logging.info(msg_body)
         put_response = put_kinesis(msg_body)
     except Exception as err:
         logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
@@ -94,20 +95,20 @@ def create_multi_part(parts):
 
 while True:
     """
-    Connect via SSL to Orbcomm websocket and decode msgs to fire to Kinesis streams
+    Connect via SSL to Orbcomm websocket and decode msgs to fire to Kinesis streams.
     """
-    logging.info('Orbcomm Ingester Scrip Starting ...')
-    # Load the CA certificates used for validating the peer's certificate
+    logging.info('Orbcomm Ingester Script Starting ...')
+    # Load the CA certificates used for validating the peer's certificate.
     sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
-    # Create an SSLSocket                                   
+    # Create an SSLSocket.                         
     clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
     secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False)
-    # Only connect, no handshake
+    # Only connect, no handshake.
     logging.debug('Established connection')
-    # Explicit handshake
+    # Explicit handshake.
     secureClientSocket.do_handshake()
     logging.debug("Complete SSL handshake")
-    # Get the certificate of the server and print
+    # Get the certificate of the server and print.
     serverCertificate = secureClientSocket.getpeercert()
     logging.debug("Certificate obtained from the server:")
     logging.debug(serverCertificate)
@@ -132,38 +133,43 @@ while True:
             try:
                 row = secureClientSocket.recv(4096)
                 if row !="":
-                    logging.debug(f"Raw - {row}")
-                    row_to_string = row.decode("utf-8") 
-                    logging.debug(f"Decoded - {row_to_string}")
-                    if 'g:1-2-' in row_to_string:
-                        first_part = row_to_string
-                    else:
-                        if first_part == "":
-                            if '!' in row_to_string:
-                                data = row_to_string.split("!")
-                                string_to_decode = '!' + str(data[1])
-                            else:
-                                string_to_decode = '!' + row_to_string
-                            if string_to_decode.find("AIVDM") != -1:
-                                decoded_message = decode(string_to_decode).asdict()
-                                logging.debug(f"Decoded First - {decoded_message}")
-                        if first_part !="" and 'g:2-2-' in row_to_string:
-                            logging.debug(f"First part  - {first_part}")
-                            logging.debug(f"Second part - {row_to_string}")
-                            parts = [first_part, row_to_string]
-                            multipart = create_multi_part(parts)
-                            logging.debug(f"Raw Multipart - {multipart}")
-                            decoded_message = decode(*multipart).asdict()
-                            logging.debug(f"Decoded Multipart - {decoded_message}")
-                            first_part = ""
-                        if decoded_message is not None:
-                            if str(decoded_message['msg_type']) in supportedAISmsgTypes:
-                                try:
-                                    stream_response = stream_message(decoded_message)
-                                    logging.debug(stream_response)
-                                except Exception as error:
-                                    logging.error(error)
-                                    raise Exception
+                    row_to_string = row.decode("utf-8")
+                    if row_to_string !="":
+                        logging.debug(f"Raw - {row}")
+                        logging.debug(f"Decoded - {row_to_string}")
+                        # Check for multipart msgs
+                        if 'g:1-2-' in row_to_string:
+                            first_part = row_to_string
+                        else:
+                            # Check message is not part of multipart msg.
+                            if first_part == "":
+                                if '!' in row_to_string:
+                                    data = row_to_string.split("!")
+                                    string_to_decode = '!' + str(data[1])
+                                else:
+                                    string_to_decode = '!' + row_to_string
+                                if string_to_decode.find("AIVDM") != -1:
+                                    decoded_message = decode(string_to_decode).asdict()
+                                    logging.debug(f"Decoded First - {decoded_message}")
+                            # Check that we are dealing with the second part of a multipart msg.
+                            # N.B. This solution only deals with 2 part msgs atm.
+                            if first_part !="" and 'g:2-2-' in row_to_string:
+                                logging.debug(f"First part  - {first_part}")
+                                logging.debug(f"Second part - {row_to_string}")
+                                parts = [first_part, row_to_string]
+                                multipart = create_multi_part(parts)
+                                logging.debug(f"Raw Multipart - {multipart}")
+                                decoded_message = decode(*multipart).asdict()
+                                logging.debug(f"Decoded Multipart - {decoded_message}")
+                                first_part = ""
+                            if decoded_message is not None:
+                                if str(decoded_message['msg_type']) in supportedAISmsgTypes:
+                                    try:
+                                        stream_response = stream_message(decoded_message)
+                                        logging.debug(stream_response)
+                                    except Exception as error:
+                                        logging.error(error)
+                                        raise Exception
             except Exception as error:
                 logging.error(error)
                 raise Exception
