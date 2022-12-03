@@ -42,7 +42,7 @@ jobs:
       - run: echo "event type is:" ${{ github.event.action }}
   deploy:
     name: Deploy
-    if: ${{ github.event.pull_request.merged == true || github.event_name == workflow_dispatch }}
+    if: ${{ github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
 
     steps:
