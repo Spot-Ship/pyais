@@ -71,6 +71,14 @@ def stream_message(msg_body):
     except:
         pass
     try:
+       del msg_body['raim']
+    except:
+        pass
+    try:
+       del msg_body['repeat']
+    except:
+        pass
+    try:
         logging.info(msg_body)
         put_response = put_kinesis(msg_body)
     except Exception as err:
