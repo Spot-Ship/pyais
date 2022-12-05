@@ -47,7 +47,7 @@ def stream_message(msg_body):
     Filters & preps for Kinesis.
     """
     try:
-        msg_body['data'] = msg_body['data'].decode("utf-8")
+       del msg_body['data']
     except:
         pass
     try:
