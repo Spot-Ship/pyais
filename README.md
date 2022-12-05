@@ -78,7 +78,7 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-
+{'msg_type': 3, 'repeat': 0, 'mmsi': 272700000, 'status': <NavigationStatus.Moored: 5>, 'turn': 0.0, 'speed': 0.0, 'accuracy': True, 'lon': 31.021412, 'lat': 46.602015, 'course': 302.6, 'heading': 68, 'second': 56, 'maneuver': 3, 'spare_1': b'\xc0', 'raim': True, 'radio': 58380}
 ```
 
 ### Type 4
