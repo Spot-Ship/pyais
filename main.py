@@ -60,7 +60,9 @@ def stream_message(msg_body):
     except:
         pass
     try:
-        msg_body['accuracy'] = msg_body['accuracy'].decode("utf-8").capitalize()
+    # Deleted for now as turning into true and flase needs to be True and False
+       # msg_body['accuracy'] = msg_body['accuracy'].decode("utf-8").capitalize()
+       del msg_body['accuracy']
     except:
         pass
     try:
