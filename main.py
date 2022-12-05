@@ -56,18 +56,26 @@ def stream_message(msg_body):
         pass
     try:
         msg_body['status'] = msg_body['status'].decode("utf-8")
-        msg_body['status'] = msg_body['status'].split('.')[:1].split(':')[:0]
+        msg_body['status'] = msg_body['status'].split('.')[1].split(':')[0]
     except:
         pass
     try:
         msg_body['maneuver'] = msg_body['maneuver'].decode("utf-8")
-        msg_body['maneuver'] = msg_body['maneuver'].split('.')[:1].split(':')[:0]
+        msg_body['maneuver'] = msg_body['maneuver'].split('.')[1].split(':')[0]
     except:
         pass
     try:
     # Deleted for now as turning into true and flase needs to be True and False
        # msg_body['accuracy'] = msg_body['accuracy'].decode("utf-8").capitalize()
        del msg_body['accuracy']
+    except:
+        pass
+    try:
+       del msg_body['raim']
+    except:
+        pass
+    try:
+       del msg_body['repeat']
     except:
         pass
     try:
