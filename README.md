@@ -94,7 +94,7 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-
+{'msg_type': 5, 'repeat': 0, 'mmsi': 413236380, 'ais_version': 0, 'imo': 0, 'callsign': '0', 'shipname': 'FENG CHUAN 68', 'ship_type': 70, 'to_bow': 45, 'to_stern': 12, 'to_port': 6, 'to_starboard': 4, 'epfd': 0, 'month': 12, 'day': 4, 'hour': 9, 'minute': 0, 'draught': 1.9, 'destination': 'FUZHOU', 'dte': True}
 ```
 
 ### Type 18
