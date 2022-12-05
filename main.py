@@ -60,6 +60,10 @@ def stream_message(msg_body):
     except:
         pass
     try:
+        msg_body['accuracy'] = msg_body['accuracy'].decode("utf-8").capitalize()
+    except:
+        pass
+    try:
         logging.info(msg_body)
         put_response = put_kinesis(msg_body)
     except Exception as err:
