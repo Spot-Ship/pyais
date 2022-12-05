@@ -56,12 +56,12 @@ def stream_message(msg_body):
         pass
     try:
         msg_body['status'] = msg_body['status'].decode("utf-8")
-        msg_body['status'] = msg_body['status'].split('.')[:1].split(':')[:0]
+        msg_body['status'] = msg_body['status'].split('.')[1].split(':')[0]
     except:
         pass
     try:
         msg_body['maneuver'] = msg_body['maneuver'].decode("utf-8")
-        msg_body['maneuver'] = msg_body['maneuver'].split('.')[:1].split(':')[:0]
+        msg_body['maneuver'] = msg_body['maneuver'].split('.')[1].split(':')[0]
     except:
         pass
     try:
