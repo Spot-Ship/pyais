@@ -26,7 +26,7 @@ logging.basicConfig(level=logLevel, format=logfmt)
 supportedAISmsgTypes = ['1','2','3','4','5','18']
 
 session = boto3.Session()
-write_client = session.client('timestream-write', config=Config(read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
+write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 
 def get_attributes(msg_body):
     if msg_body['msg_type'] in [1,2,3,4,18]:
