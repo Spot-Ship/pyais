@@ -54,6 +54,7 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 - [What is AIS?](https://www.marineinsight.com/marine-navigation/automatic-identification-system-ais-integrating-and-identifying-marine-communication-channels/)
 - [Message types](https://arundaleais.github.io/docs/ais/ais_message_types.html)
+- [Timestream Write](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/timestream-write.html)
 
 ### Type 1
 

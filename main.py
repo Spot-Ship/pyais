@@ -34,7 +34,7 @@ def get_attributes(msg_body):
             'Dimensions': [
                 {
                     'Name': 'mmmsi',
-                    'Value': msg_body['mmsi'],
+                    'Value': str(msg_body['mmsi']),
                     'DimensionValueType': 'VARCHAR'
                 }
             ],
@@ -46,27 +46,27 @@ def get_attributes(msg_body):
             'Dimensions': [
                 {
                     'Name': 'mmmsi',
-                    'Value': msg_body['mmsi'],
+                    'Value': str(msg_body['mmsi']),
                     'DimensionValueType': 'VARCHAR'
                 },
                 {
                     'Name': 'imo',
-                    'Value': msg_body['imo'],
+                    'Value': str(msg_body['imo']),
                     'DimensionValueType': 'VARCHAR'
                 },
                 {
                     'Name': 'name',
-                    'Value': msg_body['shipname'],
+                    'Value': str(msg_body['shipname']),
                     'DimensionValueType': 'VARCHAR'
                 },
                 {
                     'Name': 'callsign',
-                    'Value': msg_body['callsign'],
+                    'Value': str(msg_body['callsign']),
                     'DimensionValueType': 'VARCHAR'
                 },
                 {
                     'Name': 'ship_type',
-                    'Value': msg_body['ship_type'],
+                    'Value': str(msg_body['ship_type']),
                     'DimensionValueType': 'BIGINT'
                 },
             ],
@@ -83,42 +83,42 @@ def get_measures(msg_body):
         return [
             {
                 'Name': 'longitude',
-                'Value': msg_body['lon'],
+                'Value': str(msg_body['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': msg_body['lat'],
+                'Value': str(msg_body['lat']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'speed',
-                'Value': msg_body['speed'],
+                'Value': str(msg_body['speed']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'course',
-                'Value': msg_body['course'],
+                'Value': str(msg_body['course']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'turn',
-                'Value': msg_body['turn'],
+                'Value': str(msg_body['turn']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'status',
-                'Value': msg_body['status'],
+                'Value': str(msg_body['status']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'maneuver',
-                'Value': msg_body['maneuver'],
+                'Value': str(msg_body['maneuver']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'heading',
-                'Value': msg_body['heading'],
+                'Value': str(msg_body['heading']),
                 'Type': 'BIGINT'
             },
         ]
@@ -126,12 +126,12 @@ def get_measures(msg_body):
         return [
             {
                 'Name': 'longitude',
-                'Value': msg_body['lon'],
+                'Value': str(msg_body['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': msg_body['lat'],
+                'Value': str(msg_body['lat']),
                 'Type': 'DOUBLE'
             },
         ]
@@ -139,32 +139,32 @@ def get_measures(msg_body):
         return [
             {
                 'Name': 'destination',
-                'Value': msg_body['destination'],
+                'Value': str(msg_body['destination']),
                 'Type': 'VARCHAR'
             },
             {
                 'Name': 'to_bow',
-                'Value': msg_body['to_bow'],
+                'Value': str(msg_body['to_bow']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_stern',
-                'Value': msg_body['to_stern'],
+                'Value': str(msg_body['to_stern']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_port',
-                'Value': msg_body['to_port'],
+                'Value': str(msg_body['to_port']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_starboard',
-                'Value': msg_body['to_starboard'],
+                'Value': str(msg_body['to_starboard']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'draught',
-                'Value': msg_body['draught'],
+                'Value': str(msg_body['draught']),
                 'Type': 'BIGINT'
             },
         ]
@@ -172,27 +172,27 @@ def get_measures(msg_body):
         return [
             {
                 'Name': 'longitude',
-                'Value': msg_body['lon'],
+                'Value': str(msg_body['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': msg_body['lat'],
+                'Value': str(msg_body['lat']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'speed',
-                'Value': msg_body['speed'],
+                'Value': str(msg_body['speed']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'course',
-                'Value': msg_body['course'],
+                'Value': str(msg_body['course']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'heading',
-                'Value': msg_body['heading'],
+                'Value': str(msg_body['heading']),
                 'Type': 'BIGINT'
             },
         ]
