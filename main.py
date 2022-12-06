@@ -8,6 +8,7 @@ from pyais import decode
 import json
 import sys, traceback
 import boto3
+from botocore.config import Config
 import certifi
 import os
 import logging
@@ -24,36 +25,214 @@ logging.basicConfig(level=logLevel, format=logfmt)
 
 supportedAISmsgTypes = ['1','2','3','4','5','18']
 
-AWS_REGION = 'eu-west-2'
-kinesis_client = boto3.client("kinesis", region_name=AWS_REGION)
+session = boto3.Session()
+write_client = session.client('timestream-write', config=Config(read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 
-def put_kinesis(msg_body):
-    """
-    Sends a message to Kinesis.
-    """
-    import json
+def get_attributes(msg_body):
+    if msg_body['msg_type'] in [1,2,3,4,18]:
+        return {
+            'Dimensions': [
+                {
+                    'Name': 'mmmsi',
+                    'Value': msg_body['mmsi'],
+                    'DimensionValueType': 'VARCHAR'
+                }
+            ],
+            'MeasureName': 'position',
+            'MeasureValueType': 'MULTI'
+        }
+    if msg_body['msg_type'] == 5:
+        return {
+            'Dimensions': [
+                {
+                    'Name': 'mmmsi',
+                    'Value': msg_body['mmsi'],
+                    'DimensionValueType': 'VARCHAR'
+                },
+                {
+                    'Name': 'imo',
+                    'Value': msg_body['imo'],
+                    'DimensionValueType': 'VARCHAR'
+                },
+                {
+                    'Name': 'name',
+                    'Value': msg_body['shipname'],
+                    'DimensionValueType': 'VARCHAR'
+                },
+                {
+                    'Name': 'callsign',
+                    'Value': msg_body['callsign'],
+                    'DimensionValueType': 'VARCHAR'
+                },
+                {
+                    'Name': 'ship_type',
+                    'Value': msg_body['ship_type'],
+                    'DimensionValueType': 'BIGINT'
+                },
+            ],
+            'MeasureName': 'status',
+            'MeasureValueType': 'MULTI'
+        }
+    return {}
 
-    hashkey = str(msg_body['msg_type'])
-    stream_name = "ais_msg_type_{}".format(str(msg_body['msg_type']))
-    put_response = kinesis_client.put_record(
-        StreamName=stream_name,
-        Data=json.dumps(msg_body),
-        PartitionKey=hashkey)
-    return put_response
+def get_measures(msg_body): 
+    """
+    Returns measure by msg type
+    """
+    if msg_body['msg_type'] in [1,2,3]:
+        return [
+            {
+                'Name': 'longitude',
+                'Value': msg_body['lon'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'latitude',
+                'Value': msg_body['lat'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'speed',
+                'Value': msg_body['speed'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'course',
+                'Value': msg_body['course'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'turn',
+                'Value': msg_body['turn'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'status',
+                'Value': msg_body['status'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'maneuver',
+                'Value': msg_body['maneuver'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'heading',
+                'Value': msg_body['heading'],
+                'Type': 'BIGINT'
+            },
+        ]
+    if msg_body['msg_type'] == 4:
+        return [
+            {
+                'Name': 'longitude',
+                'Value': msg_body['lon'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'latitude',
+                'Value': msg_body['lat'],
+                'Type': 'DOUBLE'
+            },
+        ]
+    if msg_body['msg_type'] == 5:
+        return [
+            {
+                'Name': 'destination',
+                'Value': msg_body['destination'],
+                'Type': 'VARCHAR'
+            },
+            {
+                'Name': 'to_bow',
+                'Value': msg_body['to_bow'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'to_stern',
+                'Value': msg_body['to_stern'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'to_port',
+                'Value': msg_body['to_port'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'to_starboard',
+                'Value': msg_body['to_starboard'],
+                'Type': 'BIGINT'
+            },
+            {
+                'Name': 'draught',
+                'Value': msg_body['draught'],
+                'Type': 'BIGINT'
+            },
+        ]
+    if msg_body['msg_type'] == 18:
+        return [
+            {
+                'Name': 'longitude',
+                'Value': msg_body['lon'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'latitude',
+                'Value': msg_body['lat'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'speed',
+                'Value': msg_body['speed'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'course',
+                'Value': msg_body['course'],
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'heading',
+                'Value': msg_body['heading'],
+                'Type': 'BIGINT'
+            },
+        ]
+    return []
+
+def get_timestream_table(msg_type):
+    if msg_type in [1,2,3,4,18]:
+        return "Positions"
+    if msg_type == 5:
+        return "Status"
+    return ""
+    
+
+def put_timestream(msg_body):
+    """
+    Inserts msg to timestream
+    """
+    now = round(time.time())
+    records = [{
+        'Time': str(now),
+        'TimeUnit': 'SECONDS',
+        'Version': now,
+        'MeasureValues': get_measures(msg_body)
+    }]
+    try:
+        return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(msg_body['msg_type']), Records=records, CommonAttributes=get_attributes(msg_body))
+    except write_client.exceptions.RejectedRecordsException as err:
+        logging.error(f"RejectedRecords: {err}")
+        for rr in err.response["RejectedRecords"]:
+            logging.error(f"Rejected Index {str(rr['RecordIndex'])}:{rr['Reason']}")
+            if 'ExistingVersion' in rr:
+                logging.error(f"Rejected record existing version: {rr['ExistingVersion']}")
+    except Exception as err:
+        logging.error(err)
 
 
 def stream_message(msg_body):
     """
     Filters & preps for Kinesis.
     """
-    try:
-       del msg_body['data']
-    except:
-        pass
-    try:
-        del msg_body['spare_1']
-    except:
-        pass
     try:
         msg_body['status'] = msg_body['status'].decode("utf-8")
         msg_body['status'] = msg_body['status'].split('.')[1].split(':')[0]
@@ -65,22 +244,8 @@ def stream_message(msg_body):
     except:
         pass
     try:
-    # Deleted for now as turning into true and flase needs to be True and False
-       # msg_body['accuracy'] = msg_body['accuracy'].decode("utf-8").capitalize()
-       del msg_body['accuracy']
-    except:
-        pass
-    try:
-       del msg_body['raim']
-    except:
-        pass
-    try:
-       del msg_body['repeat']
-    except:
-        pass
-    try:
         logging.info(msg_body)
-        put_response = put_kinesis(msg_body)
+        put_response = put_timestream(msg_body)
     except Exception as err:
         logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
         raise Exception

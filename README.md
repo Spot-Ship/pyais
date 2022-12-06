@@ -4,12 +4,10 @@
 graph LR
 O[ORBCOMM S-AIS]
 I(Ingester)
-K>AWS Kinesis]
-R((Redshift Database))
+T((Timestream))
 
-O --> |SSL Websocket| I
-I --- K
-K --> R
+O --- |SSL Websocket| I
+I --> T
 ```
 
 ## Running Locally
