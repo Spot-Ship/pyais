@@ -249,6 +249,11 @@ def stream_message(msg_body):
     except:
         pass
     try:
+        if (msg_body['turn']) == -0.0:
+            msg_body['turn'] = 0.0
+    except:
+        pass
+    try:
         put_response = put_timestream(msg_body)
     except Exception as err:
         logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
