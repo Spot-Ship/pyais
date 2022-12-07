@@ -37,34 +37,36 @@ def get_attributes(msg_body):
             'MeasureValueType': 'MULTI'
         }
     if msg_body['msg_type'] == 5:
+        dimensions = [
+            {
+                'Name': 'mmmsi',
+                'Value': str(msg_body['mmsi']),
+                'DimensionValueType': 'VARCHAR'
+            },
+            {
+                'Name': 'imo',
+                'Value': str(msg_body['imo']),
+                'DimensionValueType': 'VARCHAR'
+            },
+            {
+                'Name': 'name',
+                'Value': str(msg_body['shipname']),
+                'DimensionValueType': 'VARCHAR'
+            },
+            {
+                'Name': 'ship_type',
+                'Value': str(msg_body['ship_type']),
+                'DimensionValueType': 'VARCHAR'
+            },
+        ]
+        if msg_body['callsign'] == "":
+            dimensions.insert(3, {
+                'Name': 'callsign',
+                'Value': str(msg_body['callsign']),
+                'DimensionValueType': 'VARCHAR'
+            })
         return {
-            'Dimensions': [
-                {
-                    'Name': 'mmmsi',
-                    'Value': str(msg_body['mmsi']),
-                    'DimensionValueType': 'VARCHAR'
-                },
-                {
-                    'Name': 'imo',
-                    'Value': str(msg_body['imo']),
-                    'DimensionValueType': 'VARCHAR'
-                },
-                {
-                    'Name': 'name',
-                    'Value': str(msg_body['shipname']),
-                    'DimensionValueType': 'VARCHAR'
-                },
-                {
-                    'Name': 'callsign',
-                    'Value': str(msg_body['callsign']),
-                    'DimensionValueType': 'VARCHAR'
-                },
-                {
-                    'Name': 'ship_type',
-                    'Value': str(msg_body['ship_type']),
-                    'DimensionValueType': 'VARCHAR'
-                },
-            ],
+            'Dimensions': dimensions,
             'MeasureName': 'status',
             'MeasureValueType': 'MULTI'
         }
@@ -246,8 +248,6 @@ def stream_message(msg_body):
         msg_body['maneuver'] = msg_body['maneuver'].split('.')[1].split(':')[0]
     except:
         pass
-    if msg_body['callsign'] == "":
-        msg_body['callsign'] = "-"
     try:
         put_response = put_timestream(msg_body)
     except Exception as err:
