@@ -1,12 +1,7 @@
-from shutil import ExecError
 import socket
 import ssl
-import platform
-from datetime import datetime
 import time
 from pyais import decode
-import json
-import sys, traceback
 import boto3
 from botocore.config import Config
 import certifi
@@ -74,6 +69,7 @@ def get_attributes(msg_body):
             'MeasureValueType': 'MULTI'
         }
     return {}
+
 
 def get_measures(msg_body): 
     """
@@ -199,6 +195,7 @@ def get_measures(msg_body):
             },
         ]
     return []
+
 
 def get_timestream_table(msg_type):
     if msg_type in [1,2,3,4,18]:
