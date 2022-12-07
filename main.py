@@ -136,7 +136,7 @@ def get_measures(msg_body):
             },
         ]
     if msg_body['msg_type'] == 5:
-        return [
+        measures = [
             {
                 'Name': 'destination',
                 'Value': str(msg_body['destination']),
@@ -168,6 +168,13 @@ def get_measures(msg_body):
                 'Type': 'DOUBLE'
             },
         ]
+        if msg_body['destination'] != "":
+            measures.insert(0, {
+                'Name': 'destination',
+                'Value': str(msg_body['destination']),
+                'Type': 'VARCHAR'
+            })
+        return measures
     if msg_body['msg_type'] == 18:
         return [
             {
