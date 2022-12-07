@@ -235,7 +235,7 @@ def put_timestream(msg_body):
 
 def stream_message(msg_body):
     """
-    Filters & preps for Kinesis.
+    Filters & preps for Timestream.
     """
     try:
         msg_body['status'] = msg_body['status'].decode("utf-8")
@@ -247,6 +247,8 @@ def stream_message(msg_body):
         msg_body['maneuver'] = msg_body['maneuver'].split('.')[1].split(':')[0]
     except:
         pass
+    if msg_body['callsign'] == "":
+        msg_body['callsign'] = "-"
     try:
         put_response = put_timestream(msg_body)
     except Exception as err:
