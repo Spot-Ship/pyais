@@ -138,11 +138,6 @@ def get_measures(msg_body):
     if msg_body['msg_type'] == 5:
         measures = [
             {
-                'Name': 'destination',
-                'Value': str(msg_body['destination']),
-                'Type': 'VARCHAR'
-            },
-            {
                 'Name': 'to_bow',
                 'Value': str(msg_body['to_bow']),
                 'Type': 'BIGINT'
