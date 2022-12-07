@@ -165,7 +165,7 @@ def get_measures(msg_body):
             {
                 'Name': 'draught',
                 'Value': str(msg_body['draught']),
-                'Type': 'BIGINT'
+                'Type': 'DOUBLE'
             },
         ]
     if msg_body['msg_type'] == 18:
@@ -229,6 +229,7 @@ def put_timestream(msg_body):
             if 'ExistingVersion' in rr:
                 logging.error(f"Rejected record existing version: {rr['ExistingVersion']}")
     except Exception as err:
+        logging.info(f" Error occurred on {msg_body}")
         logging.error(err)
 
 
