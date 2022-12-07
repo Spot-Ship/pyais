@@ -59,7 +59,7 @@ def get_attributes(msg_body):
                 'DimensionValueType': 'VARCHAR'
             },
         ]
-        if msg_body['callsign'] == "":
+        if msg_body['callsign'] != "":
             dimensions.insert(3, {
                 'Name': 'callsign',
                 'Value': str(msg_body['callsign']),
