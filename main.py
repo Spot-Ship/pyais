@@ -49,16 +49,17 @@ def get_attributes(msg_body):
                 'DimensionValueType': 'VARCHAR'
             },
             {
-                'Name': 'name',
-                'Value': str(msg_body['shipname']),
-                'DimensionValueType': 'VARCHAR'
-            },
-            {
                 'Name': 'ship_type',
                 'Value': str(msg_body['ship_type']),
                 'DimensionValueType': 'VARCHAR'
             },
         ]
+        if msg_body['shipname'] != "":
+            dimensions.insert(2, {
+                'Name': 'name',
+                'Value': str(msg_body['shipname']),
+                'DimensionValueType': 'VARCHAR'
+            })
         if msg_body['callsign'] != "":
             dimensions.insert(3, {
                 'Name': 'callsign',
