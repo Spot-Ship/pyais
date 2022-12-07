@@ -67,7 +67,7 @@ def get_attributes(msg_body):
                 {
                     'Name': 'ship_type',
                     'Value': str(msg_body['ship_type']),
-                    'DimensionValueType': 'BIGINT'
+                    'DimensionValueType': 'VARCHAR'
                 },
             ],
             'MeasureName': 'status',
@@ -210,7 +210,7 @@ def put_timestream(msg_body):
     """
     Inserts msg to timestream
     """
-    logging.info(msg_body)
+    logging.debug(msg_body)
     now = round(time.time())
     records = [{
         'Time': str(now),
@@ -219,8 +219,8 @@ def put_timestream(msg_body):
         'MeasureValues': get_measures(msg_body)
     }]
     try:
-        logging.info(f"Writing to {get_timestream_table(msg_body['msg_type'])}")
-        logging.info(records)
+        logging.debug(f"Writing to {get_timestream_table(msg_body['msg_type'])}")
+        logging.debug(records)
         return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(msg_body['msg_type']), Records=records, CommonAttributes=get_attributes(msg_body))
     except write_client.exceptions.RejectedRecordsException as err:
         logging.error(f"RejectedRecords: {err}")
