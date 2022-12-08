@@ -263,17 +263,16 @@ def stream_message(msg_body):
     except:
         pass
     try:
-        if msg_body['month'] == 2 and msg_body['day'] > 28:
-            # Check for leap year
-            if msg_body['year'] % 4 == 0 and msg_body['day'] > 29:
-                msg_body['day'] = 29
-            else:
-                msg_body['day'] = 28
-        if msg_body['minute'] >= 60:
-            msg_body['minute'] = 59
-        if msg_body['type'] == 4:
-            msg_body['eta'] = datetime.today() + relativedelta(years=msg_body['year'], months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'], seconds=msg_body['second'])
         if msg_body['type'] == 5:
+            if msg_body['month'] > 12:
+                msg_body['month'] = 0
+            if msg_body['day'] > 31:
+                msg_body['day'] = 0
+            if msg_body['hour'] >= 24:
+                msg_body['hour'] = 0
+            if msg_body['minute'] >= 60:
+                msg_body['minute'] = 0
+        
             msg_body['eta'] = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
     except:
         pass
