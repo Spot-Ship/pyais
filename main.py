@@ -37,7 +37,7 @@ def get_eta(msg_body):
         msg_body['minute'] = 0
         
     eta = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
-    return eta
+    return eta.strftime("%m/%d/%Y, %H:%M:%S")
             
 
 def get_attributes(msg_body):
