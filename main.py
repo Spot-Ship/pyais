@@ -8,6 +8,9 @@ import certifi
 import os
 import logging
 from multiprocessing import Pool
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
 
 # Context creation
 sslContext              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -161,6 +164,11 @@ def get_measures(msg_body):
                 'Value': str(msg_body['draught']),
                 'Type': 'DOUBLE'
             },
+            {
+                'Name': 'eta',
+                'Value': str(msg_body['eta']),
+                'Type': 'TIMESTAMP'
+            },
         ]
         if msg_body['destination'] != "":
             measures.insert(0, {
@@ -255,6 +263,20 @@ def stream_message(msg_body):
     except:
         pass
     try:
+        if msg_body['type'] == 5:
+            if msg_body['month'] > 12:
+                msg_body['month'] = 0
+            if msg_body['day'] > 31:
+                msg_body['day'] = 0
+            if msg_body['hour'] >= 24:
+                msg_body['hour'] = 0
+            if msg_body['minute'] >= 60:
+                msg_body['minute'] = 0
+        
+            msg_body['eta'] = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
+    except:
+        pass
+    try:
         put_response = put_timestream(msg_body)
     except Exception as err:
         logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
@@ -325,6 +347,8 @@ if __name__ == '__main__':
         first_part = ""
         parts = []
         decoded_message = None
+        emptyMsgCounter = 0
+        emptyMsgTime = datetime.today();
         try:
             pool = Pool()
             while True:
@@ -333,6 +357,7 @@ if __name__ == '__main__':
                     if row !="":
                         row_to_string = row.decode("utf-8")
                         if row_to_string !="":
+                            emptyMsgCounter = 0
                             logging.debug(f"Raw - {row}")
                             logging.debug(f"Decoded utf-8 - {row_to_string}")
                             # Check for multipart msgs
@@ -368,6 +393,14 @@ if __name__ == '__main__':
                                         except Exception as error:
                                             logging.error(error)
                                             raise Exception
+                        else:
+                            emptyMsgCounter +=1
+                            if emptyMsgCounter == 1:
+                                emptyMsgTime = datetime.today();
+                            if emptyMsgCounter % 10000 == 0:
+                                logging.error(f"No msgs received since: {emptyMsgTime}")
+                            if emptyMsgCounter == 100000:
+                                raise Exception(f"Something interrupted the stream since {emptyMsgTime}")
                 except Exception as error:
                     logging.error(error)
                     raise Exception
