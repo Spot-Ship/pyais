@@ -26,6 +26,20 @@ supportedAISmsgTypes = ['1','2','3','4','5','18']
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 
+def get_eta(msg_body):
+    if msg_body['month'] > 12:
+        msg_body['month'] = 0
+    if msg_body['day'] > 31:
+        msg_body['day'] = 0
+    if msg_body['hour'] >= 24:
+        msg_body['hour'] = 0
+    if msg_body['minute'] >= 60:
+        msg_body['minute'] = 0
+        
+    eta = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
+    return eta
+            
+
 def get_attributes(msg_body):
     if msg_body['msg_type'] in [1,2,3,4,18]:
         return {
@@ -166,7 +180,7 @@ def get_measures(msg_body):
             },
             {
                 'Name': 'eta',
-                'Value': str(msg_body['eta']),
+                'Value': get_eta(msg_body),
                 'Type': 'TIMESTAMP'
             },
         ]
@@ -260,20 +274,6 @@ def stream_message(msg_body):
     try:
         if (msg_body['turn']) == -0.0:
             msg_body['turn'] = 0.0
-    except:
-        pass
-    try:
-        if msg_body['type'] == 5:
-            if msg_body['month'] > 12:
-                msg_body['month'] = 0
-            if msg_body['day'] > 31:
-                msg_body['day'] = 0
-            if msg_body['hour'] >= 24:
-                msg_body['hour'] = 0
-            if msg_body['minute'] >= 60:
-                msg_body['minute'] = 0
-        
-            msg_body['eta'] = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
     except:
         pass
     try:
