@@ -358,6 +358,7 @@ if __name__ == '__main__':
                     if row !="":
                         row_to_string = row.decode("utf-8")
                         if row_to_string !="":
+                            emptyMsgCounter = 0
                             logging.debug(f"Raw - {row}")
                             logging.debug(f"Decoded utf-8 - {row_to_string}")
                             # Check for multipart msgs
@@ -399,7 +400,7 @@ if __name__ == '__main__':
                                 emptyMsgTime = datetime.today();
                             if emptyMsgCounter % 10000 == 0:
                                 logging.error(f"No msgs received since: {emptyMsgTime}")
-                            if emptyMsgCounter % 100000 == 0:
+                            if emptyMsgCounter == 100000:
                                 raise Exception(f"Something interrupted the stream since {emptyMsgTime}")
                 except Exception as error:
                     logging.error(error)
