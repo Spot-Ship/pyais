@@ -4,12 +4,10 @@
 graph LR
 O[ORBCOMM S-AIS]
 I(Ingester)
-K>AWS Kinesis]
-R((Redshift Database))
+T((Timestream))
 
-O --> |SSL Websocket| I
-I --- K
-K --> R
+O --- |SSL Websocket| I
+I --> T
 ```
 
 ## Running Locally
@@ -56,6 +54,7 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 - [What is AIS?](https://www.marineinsight.com/marine-navigation/automatic-identification-system-ais-integrating-and-identifying-marine-communication-channels/)
 - [Message types](https://arundaleais.github.io/docs/ais/ais_message_types.html)
+- [Timestream Write](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/timestream-write.html)
 
 ### Type 1
 
@@ -63,21 +62,21 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ```json
 {
-    'type': 1,
-    'repeat': 0,
-    'mmsi': '657177000',
-    'status': <NavigationStatus.UnderWaySailing: 8>,
-    'turn': 0,
-    'speed': 0.8,
-    'accuracy': 1,
-    'lon': 7.824271666666666,
-    'lat': 4.016156666666666,
-    'course': 205.8,
-    'heading': 225,
-    'second': 14,
-    'maneuver': <ManeuverIndicator.NotAvailable: 0>,
-    'raim': 0,
-    'radio': 24812
+  "type": 1,
+  "repeat": 0,
+  "mmsi": "657177000",
+  "status": 8,
+  "turn": 0,
+  "speed": 0.8,
+  "accuracy": 1,
+  "lon": 7.824271666666666,
+  "lat": 4.016156666666666,
+  "course": 205.8,
+  "heading": 225,
+  "second": 14,
+  "maneuver": 0,
+  "raim": 0,
+  "radio": 24812
 }
 ```
 
@@ -86,7 +85,23 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-
+{
+  "type": 1,
+  "repeat": 0,
+  "mmsi": "657177000",
+  "status": 8,
+  "turn": 0,
+  "speed": 0.8,
+  "accuracy": 1,
+  "lon": 7.824271666666666,
+  "lat": 4.016156666666666,
+  "course": 205.8,
+  "heading": 225,
+  "second": 14,
+  "maneuver": 0,
+  "raim": 0,
+  "radio": 24812
+}
 ```
 
 ### Type 3
@@ -94,7 +109,24 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-{'msg_type': 3, 'repeat': 0, 'mmsi': 272700000, 'status': <NavigationStatus.Moored: 5>, 'turn': 0.0, 'speed': 0.0, 'accuracy': True, 'lon': 31.021412, 'lat': 46.602015, 'course': 302.6, 'heading': 68, 'second': 56, 'maneuver': 3, 'spare_1': b'\xc0', 'raim': True, 'radio': 58380}
+{
+    "msg_type": 3,
+    "repeat": 0,
+    "mmsi": 272700000,
+    "status": 5,
+    "turn": 0.0,
+    "speed": 0.0,
+    "accuracy": True,
+    "lon": 31.021412,
+    "lat": 46.602015,
+    "course": 302.6,
+    "heading": 68,
+    "second": 56,
+    "maneuver": 3,
+    "spare_1": b"\xc0",
+    "raim": True,
+    "radio": 58380
+}
 ```
 
 ### Type 4
@@ -102,7 +134,23 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-
+{
+    "type": 4,
+    "repeat": 0,
+    "mmsi": "006631000",
+    "year": 0,
+    "month": 0,
+    "day": 0,
+    "hour": 24,
+    "minute": 60,
+    "second": 60,
+    "accuracy": 0,
+    "lon": 181.0,
+    "lat": 91.0,
+    "epfd": <EpfdType.Undefined: 0>,
+    "raim": 0,
+    "radio": 147456
+}
 ```
 
 ### Type 5
@@ -110,7 +158,28 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 #### Example
 
 ```json
-{'msg_type': 5, 'repeat': 0, 'mmsi': 413236380, 'ais_version': 0, 'imo': 0, 'callsign': '0', 'shipname': 'FENG CHUAN 68', 'ship_type': 70, 'to_bow': 45, 'to_stern': 12, 'to_port': 6, 'to_starboard': 4, 'epfd': 0, 'month': 12, 'day': 4, 'hour': 9, 'minute': 0, 'draught': 1.9, 'destination': 'FUZHOU', 'dte': True}
+{
+    "msg_type": 5,
+    "repeat": 0,
+    "mmsi": 413236380,
+    "ais_version": 0,
+    "imo": 0,
+    "callsign": "0",
+    "shipname": "FENG CHUAN 68",
+    "ship_type": 70,
+    "to_bow": 45,
+    "to_stern": 12,
+    "to_port": 6,
+    "to_starboard": 4,
+    "epfd": 0,
+    "month": 12,
+    "day": 4,
+    "hour": 9,
+    "minute": 0,
+    "draught": 1.9,
+    "destination": "FUZHOU",
+    "dte": True
+}
 ```
 
 ### Type 18
@@ -119,26 +188,26 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ```json
 {
-    'msg_type': 18,
-    'repeat': 0,
-    'mmsi': 316044687,
-    'reserved_1': 0,
-    'speed': 0.0,
-    'accuracy': True,
-    'lon': -122.499012,
-    'lat': 37.972215,
-    'course': 283.9,
-    'heading': 511,
-    'second': 20,
-    'reserved_2': 0,
-    'cs': True,
-    'display': False,
-    'dsc': True,
-    'band': True,
-    'msg22': False,
-    'assigned': False,
-    'raim': True,
-    'radio': 917510
+    "msg_type": 18,
+    "repeat": 0,
+    "mmsi": 316044687,
+    "reserved_1": 0,
+    "speed": 0.0,
+    "accuracy": True,
+    "lon": -122.499012,
+    "lat": 37.972215,
+    "course": 283.9,
+    "heading": 511,
+    "second": 20,
+    "reserved_2": 0,
+    "cs": True,
+    "display": False,
+    "dsc": True,
+    "band": True,
+    "msg22": False,
+    "assigned": False,
+    "raim": True,
+    "radio": 917510
 }
 ```
 
