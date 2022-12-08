@@ -8,6 +8,9 @@ import certifi
 import os
 import logging
 from multiprocessing import Pool
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
 
 # Context creation
 sslContext              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -161,6 +164,11 @@ def get_measures(msg_body):
                 'Value': str(msg_body['draught']),
                 'Type': 'DOUBLE'
             },
+            {
+                'Name': 'eta',
+                'Value': str(msg_body['eta']),
+                'Type': 'TIMESTAMP'
+            },
         ]
         if msg_body['destination'] != "":
             measures.insert(0, {
@@ -255,6 +263,21 @@ def stream_message(msg_body):
     except:
         pass
     try:
+        if msg_body['month'] == 2 and msg_body['day'] > 28:
+            # Check for leap year
+            if msg_body['year'] % 4 == 0 and msg_body['day'] > 29:
+                msg_body['day'] = 29
+            else:
+                msg_body['day'] = 28
+        if msg_body['minute'] >= 60:
+            msg_body['minute'] = 59
+        if msg_body['type'] == 4:
+            msg_body['eta'] = datetime.today() + relativedelta(years=msg_body['year'], months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'], seconds=msg_body['second'])
+        if msg_body['type'] == 5:
+            msg_body['eta'] = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
+    except:
+        pass
+    try:
         put_response = put_timestream(msg_body)
     except Exception as err:
         logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
@@ -325,6 +348,8 @@ if __name__ == '__main__':
         first_part = ""
         parts = []
         decoded_message = None
+        emptyMsgCounter = 0
+        emptyMsgTime = datetime.today();
         try:
             pool = Pool()
             while True:
@@ -368,6 +393,14 @@ if __name__ == '__main__':
                                         except Exception as error:
                                             logging.error(error)
                                             raise Exception
+                        else:
+                            emptyMsgCounter +=1
+                            if emptyMsgCounter == 1:
+                                emptyMsgTime = datetime.today();
+                            if emptyMsgCounter % 10000 == 0:
+                                logging.error(f"No msgs received since: {emptyMsgTime}")
+                            if emptyMsgCounter % 100000 == 0:
+                                raise Exception(f"Something interrupted the stream since {emptyMsgTime}")
                 except Exception as error:
                     logging.error(error)
                     raise Exception
