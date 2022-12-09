@@ -11,6 +11,7 @@ from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+multiprocessing = False
 
 # Context creation
 sslContext              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -297,18 +298,60 @@ def checksum(sentence):
     return result
 
 
-def create_multi_part(parts):
-    decoded_parts = []
+def filterMsgs(msg):
+    """
+    Checks decoded msg is of a type we care about & sends it to process to stream it.
+    """
+    if msg is not None:
+        if str(msg['msg_type']) in supportedAISmsgTypes:
+            try:
+                stream_message(msg)
+            except Exception as error:
+                logging.error(error)
+                raise Exception
+
+
+def prepDecodeString(sequence):
+    if '!' in sequence:
+        data = sequence.split("!")
+        return '!' + str(data[1])
+    else:
+        return '!' + sequence
+
+
+def decodeAIS(msg):
+    """
+    Decode single part AIS Messages
+    """
+    string_to_decode = prepDecodeString(msg)
+    if string_to_decode.find("AIVDM") != -1:
+        decoded_message = decode(string_to_decode).asdict()
+        logging.debug(f"AIS Decoded First - {decoded_message}")
+        try:
+            filterMsgs(decoded_message)
+        except Exception as error:
+                logging.error(error)
+                raise Exception   
+
+           
+def decodeMultipartAIS(parts):
+    """
+    Decode multi-part AIS Messages
+    """
+    multipart = []
     for part in parts:
-        if '!' in part:
-            data = part.split("!")
-            string_to_decode = '!' + str(data[1])
-        else:
-            string_to_decode = '!' + part
-        string_to_decode = string_to_decode.replace("\r\n","")
+        string_to_decode = prepDecodeString(part).replace("\r\n","")
         if "AIVDM" in string_to_decode:
-            decoded_parts.append(string_to_decode)
-    return decoded_parts
+            multipart.append(string_to_decode)
+    logging.debug(f"Raw Multipart - {multipart}")
+    decoded_message = decode(*multipart).asdict()
+    logging.debug(f"AIS Decoded Multipart - {decoded_message}")
+    try:
+        filterMsgs(decoded_message)
+    except Exception as error:
+        logging.error(error)
+        raise Exception
+    
 
 if __name__ == '__main__':
     while True:
@@ -363,36 +406,32 @@ if __name__ == '__main__':
                             # Check for multipart msgs
                             if 'g:1-2-' in row_to_string:
                                 first_part = row_to_string
-                            else:
-                                # Check message is not part of multipart msg.
-                                if first_part == "":
-                                    if '!' in row_to_string:
-                                        data = row_to_string.split("!")
-                                        string_to_decode = '!' + str(data[1])
-                                    else:
-                                        string_to_decode = '!' + row_to_string
-                                    if string_to_decode.find("AIVDM") != -1:
-                                        decoded_message = decode(string_to_decode).asdict()
-                                        logging.debug(f"AIS Decoded First - {decoded_message}")
-                                # Check that we are dealing with the second part of a multipart msg.
-                                # N.B. This solution only deals with 2 part msgs atm.
-                                if first_part !="" and 'g:2-2-' in row_to_string:
-                                    logging.debug(f"First part  - {first_part}")
-                                    logging.debug(f"Second part - {row_to_string}")
-                                    parts = [first_part, row_to_string]
-                                    multipart = create_multi_part(parts)
-                                    logging.debug(f"Raw Multipart - {multipart}")
-                                    decoded_message = decode(*multipart).asdict()
-                                    logging.debug(f"AIS Decoded Multipart - {decoded_message}")
-                                    first_part = ""
-                                if decoded_message is not None:
-                                    if str(decoded_message['msg_type']) in supportedAISmsgTypes:
-                                        try:
-                                            result = pool.apply_async(stream_message, [decoded_message])
-                                            logging.debug(result.get(timeout=1))
-                                        except Exception as error:
-                                            logging.error(error)
-                                            raise Exception
+                            # Check message is not part of multipart msg.
+                            elif first_part == "":
+                                if multiprocessing:
+                                    try:
+                                        result = pool.apply_async(decodeAIS, [row_to_string])
+                                        logging.debug(result.get(timeout=1))
+                                    except Exception as error:
+                                        logging.error(error)
+                                        raise Exception
+                                else: decodeAIS(row_to_string)
+                            # Check that we are dealing with the second part of a multipart msg.
+                            # N.B. This solution only deals with 2 part msgs atm.
+                            elif first_part !="" and 'g:2-2-' in row_to_string:
+                                logging.debug(f"First part  - {first_part}")
+                                logging.debug(f"Second part - {row_to_string}")
+                                parts = [first_part, row_to_string]
+                                if multiprocessing:
+                                    try:
+                                        result = pool.apply_async(decodeMultipartAIS, [parts])
+                                        logging.debug(result.get(timeout=1))
+                                    except Exception as error:
+                                        logging.error(error)
+                                        raise Exception
+                                else:
+                                    decodeMultipartAIS(parts)
+                                first_part = ""
                         else:
                             emptyMsgCounter +=1
                             if emptyMsgCounter == 1:
