@@ -330,6 +330,7 @@ def decodeAIS(msg):
         try:
             filterMsgs(decoded_message)
         except Exception as error:
+                logging.error(f"Error occured decoding: {msg}")
                 logging.error(error)
                 raise Exception   
 
@@ -349,6 +350,7 @@ def decodeMultipartAIS(parts):
     try:
         filterMsgs(decoded_message)
     except Exception as error:
+        logging.error(f"Error occured decoding: {parts}")
         logging.error(error)
         raise Exception
     
