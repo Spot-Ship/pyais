@@ -5,9 +5,13 @@ graph LR
 O[ORBCOMM S-AIS]
 I(Ingester)
 T((Timestream))
+L>Updater Lambda]
+S((Spotship Database))
 
 O --- |SSL Websocket| I
 I --> T
+T --- |Invoked every minute for last 70s of msgs| L
+L --> S
 ```
 
 ## Running Locally
