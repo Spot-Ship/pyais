@@ -325,9 +325,9 @@ def decodeAIS(msg):
     """
     string_to_decode = prepDecodeString(msg)
     if string_to_decode.find("AIVDM") != -1:
-        decoded_message = decode(string_to_decode).asdict()
-        logging.debug(f"AIS Decoded First - {decoded_message}")
         try:
+            decoded_message = decode(string_to_decode).asdict()
+            logging.debug(f"AIS Decoded First - {decoded_message}")
             filterMsgs(decoded_message)
         except Exception as error:
                 logging.error(f"Error occured decoding: {msg}")
@@ -339,15 +339,15 @@ def decodeMultipartAIS(parts):
     """
     Decode multi-part AIS Messages
     """
-    multipart = []
-    for part in parts:
-        string_to_decode = prepDecodeString(part).replace("\r\n","")
-        if "AIVDM" in string_to_decode:
-            multipart.append(string_to_decode)
-    logging.debug(f"Raw Multipart - {multipart}")
-    decoded_message = decode(*multipart).asdict()
-    logging.debug(f"AIS Decoded Multipart - {decoded_message}")
     try:
+        multipart = []
+        for part in parts:
+            string_to_decode = prepDecodeString(part).replace("\r\n","")
+            if "AIVDM" in string_to_decode:
+                multipart.append(string_to_decode)
+        logging.debug(f"Raw Multipart - {multipart}")
+        decoded_message = decode(*multipart).asdict()
+        logging.debug(f"AIS Decoded Multipart - {decoded_message}")
         filterMsgs(decoded_message)
     except Exception as error:
         logging.error(f"Error occured decoding: {parts}")
