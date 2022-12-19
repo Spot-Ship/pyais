@@ -404,7 +404,7 @@ if __name__ == '__main__':
                             logging.debug(f"Raw - {row}")
                             logging.debug(f"Decoded utf-8 - {row_to_string}")
                             # Check for multipart msgs
-                            # N.B. This solution only deals with 2 part msgs atm.
+                            # N.B. This solution only deals with 2 part msgs.
                             if 'AIVDM,2,1' in row_to_string:
                                 first_part = row_to_string
                             # Check message is not part of multipart msg.
@@ -418,7 +418,7 @@ if __name__ == '__main__':
                                         raise Exception
                                 else: decodeAIS(row_to_string)
                             # Check that we are dealing with the second part of a multipart msg.
-                            # N.B. This solution only deals with 2 part msgs atm.
+                            # N.B. This solution only deals with 2 part msgs.
                             elif first_part !="" and 'AIVDM,2,2' in row_to_string:
                                 logging.debug(f"First part  - {first_part}")
                                 logging.debug(f"Second part - {row_to_string}")
