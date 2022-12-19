@@ -54,13 +54,48 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ## AIS Message types
 
+A number of messages we get through are marked as not supported below as we do not care about their contents at this time.
+
 ### Useful links
 
 - [What is AIS?](https://www.marineinsight.com/marine-navigation/automatic-identification-system-ais-integrating-and-identifying-marine-communication-channels/)
 - [Message types](https://arundaleais.github.io/docs/ais/ais_message_types.html)
 - [Timestream Write](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/timestream-write.html)
+- [AIS MSG Decoder](https://www.maritec.co.za/aisvdmvdodecoding)
+
+### Raw message examples
+
+Msgs can be single or multipart.
+
+_N.B._ Msgs that have AIVDM are for other vessels, AIVDO are your own vessels, we only care about AIVDM as we don't have vessels.
+
+```txt
+!AIVDM,1,1,,A,13u?etPv2;0n:dDPwUM1U1Cb069D,0*23
+!AIVDM,1,1,,A,400TcdiuiT7VDR>3nIfr6>i00000,0*78
+!AIVDM,2,1,0,A,58wt8Ui`g??r21`7S=:22058<v05Htp000000015>8OA;0sk,0*7B
+!AIVDM,2,2,0,A,eQ8823mDm3kP00000000000,2*5D
+!AIVDM,1,1,4,B,6>jR0600V:C0>da4P106P00,2*02
+!AIVDM,2,1,9,B,61c2;qLPH1m@wsm6ARhp<ji6ATHd<C8f=Bhk>34k;S8i=3To,0*2C
+!AIVDM,2,2,9,B,Djhi=3Di<2pp=34k>4D,2*03
+!AIVDM,1,1,1,B,8>h8nkP0Glr=<hFI0D6??wvlFR06EuOwgwl?wnSwe7wvlOw?sAwwnSGmwvh0,0*17
+!AIVDO,1,1,,A,95M2oQ@41Tr4L4H@eRvQ;2h20000,0*0D
+!AIVDM,1,1,,B,;8u:8CAuiT7Bm2CIM=fsDJ100000,0*51
+!AIVDM,1,1,,B,>>M4fWA<59B1@E=@,0*17
+!AIVDM,1,1,,A,B6CdCm0t3`tba35f@V9faHi7kP06,0*58
+!AIVDM,2,1,0,B,C8u:8C@t7@TnGCKfm6Po`e6N`:Va0L2J;06HV50JV?SjBPL3,0*28
+!AIVDM,2,2,0,B,11RP,0*17
+!AIVDO,2,1,5,B,E1c2;q@b44ah4ah0h:2ab@70VRpU<Bgpm4:gP50HH`Th`QF5,0*7B
+!AIVDO,2,2,5,B,1CQ1A83PCAH0,0*60
+!AIVDO,1,1,,B,H1c2;qA@PU>0U>060<h5=>0:1Dp,2*7D
+!AIVDO,1,1,,B,H1c2;qDTijklmno31<<C970`43<1,0*28
+!AIVDM,1,1,,A,KCQ9r=hrFUnH7P00,0*41
+!AIVDM,1,1,,B,KC5E2b@U19PFdLbMuc5=ROv62<7m,0*16
+!AIVDM,1,1,,B,K5DfMB9FLsM?P00d,0*70
+```
 
 ### Type 1
+
+_Position report_ | Scheduled position report (Class A shipborne mobile equipment).
 
 #### Example
 
@@ -86,6 +121,8 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ### Type 2
 
+_Position report_ | Assigned scheduled position report (Class A shipborne mobile equipment).
+
 #### Example
 
 ```json
@@ -109,6 +146,8 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 ```
 
 ### Type 3
+
+_Position report_ | Special position report, response to interrogation (Class A shipborne mobile equipment).
 
 #### Example
 
@@ -135,6 +174,8 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ### Type 4
 
+_Base station report_ | Position, UTC, date and current slot number of base station.
+
 #### Example
 
 ```json
@@ -158,6 +199,8 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 ```
 
 ### Type 5
+
+_Static and voyage related data_ | Scheduled static and voyage related vessel data report (Class A shipborne mobile equipment).
 
 #### Example
 
@@ -186,7 +229,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 6
+### Type 6 (Not Supported)
+
+_Binary addressed message_ | Binary data for addressed communication.
 
 #### Example
 
@@ -204,7 +249,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 7
+### Type 7 (Not Supported)
+
+_Binary acknowledgement_ | Acknowledgement of received addressed binary data.
 
 #### Example
 
@@ -224,7 +271,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 8
+### Type 8 (Not Supported)
+
+_Binary broadcast message_ | Binary data for broadcast communication.
 
 #### Example
 
@@ -239,7 +288,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 9
+### Type 9 (Not Supported)
+
+_Standard SAR aircraft position report_ | Position report for airborne stations involved in SAR operations, only.
 
 #### Example
 
@@ -262,7 +313,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 10
+### Type 10 (Not Supported)
+
+_UTC/date inquiry_ | Request UTC and date.
 
 #### Example
 
@@ -275,7 +328,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 11
+### Type 11 (Not Supported)
+
+_UTC/date response_ | Current UTC and date if available.
 
 #### Example
 
@@ -299,7 +354,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 12
+### Type 12 (Not Supported)
+
+_Addressed safety related message_ | Safety related data for addressed communication.
 
 #### Example
 
@@ -315,7 +372,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 13
+### Type 13 (Not Supported)
+
+_Safety related acknowledge-ment_ | Acknowledgement of received addressed safety related message.
 
 #### Example
 
@@ -335,7 +394,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 14
+### Type 14 (Not Supported)
+
+_Safety related broadcast message_ | Safety related data for broadcast communication.
 
 #### Example
 
@@ -348,7 +409,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 15
+### Type 15 (Not Supported)
+
+_Interrogation_ | Request for a specific message type (can result in multiple responses from one or several stations).
 
 #### Example
 
@@ -368,7 +431,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 16
+### Type 16 (Not Supported)
+
+_Assignment mode command_ | Assignment of a specific report behaviour by competent authority using a Base station.
 
 #### Example
 
@@ -386,7 +451,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 17
+### Type 17 (Not Supported)
+
+_DGNSS broadcast binary message_| DGNSS corrections provided by a base station.
 
 #### Example
 
@@ -402,6 +469,8 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 ```
 
 ### Type 18
+
+_Standard Class B equipment position report_ | Standard position report for Class B shipborne mobile equipment to be used instead of Messages 1, 2, 3.
 
 #### Example
 
@@ -430,7 +499,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 19
+### Type 19 (Not Supported)
+
+_Extended Class B equipment position report_ | **[No longer required]** Extended position report for Class B shipborne mobile equipment, contains additional static information.
 
 #### Example
 
@@ -460,7 +531,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 20
+### Type 20 (Not Supported)
+
+_Data link management message_ | Reserve slots for Base station(s)
 
 #### Example
 
@@ -488,7 +561,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 21
+### Type 21 (Not Supported)
+
+_Aids-to-navigation report_ | Position and status report for aids-to-navigation.
 
 #### Example
 
@@ -517,7 +592,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 22
+### Type 22 (Not Supported)
+
+_Channel management_ | Management of channels and transceiver modes by a Base station.
 
 #### Example
 
@@ -525,7 +602,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
 ```
 
-### Type 23
+### Type 23 (Not Supported)
+
+_Group assignment command_ | Assignment of a specific report behaviour by competent authority using a Base station to a specific group of mobiles.
 
 #### Example
 
@@ -546,7 +625,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 24
+### Type 24 (Not Supported)
+
+_Static data report_ | Additional data assigned to an MMSI, _Part A_: Name, _Part B_: Static Data.
 
 #### Example
 
@@ -558,7 +639,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 25
+### Type 25 (Not Supported)
+
+_Single slot binary message_ | Short unscheduled binary data transmission (Broadcast or addressed).
 
 #### Example
 
@@ -573,7 +656,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 26
+### Type 26 (Not Supported)
+
+_Multiple slot binary message with Communications State_ | Scheduled binary data transmission (Broadcast or addressed).
 
 #### Example
 
@@ -590,7 +675,9 @@ Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 }
 ```
 
-### Type 27
+### Type 27 (Not Supported)
+
+_Position report for long-range applications_ | Class A and Class B “SO” shipborne mobile equipment outside base station coverage.
 
 #### Example
 

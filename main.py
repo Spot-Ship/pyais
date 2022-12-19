@@ -325,32 +325,32 @@ def decodeAIS(msg):
     """
     string_to_decode = prepDecodeString(msg)
     if string_to_decode.find("AIVDM") != -1:
-        decoded_message = decode(string_to_decode).asdict()
-        logging.debug(f"AIS Decoded First - {decoded_message}")
         try:
+            decoded_message = decode(string_to_decode).asdict()
+            logging.debug(f"AIS Decoded First - {decoded_message}")
             filterMsgs(decoded_message)
         except Exception as error:
-                logging.error(error)
-                raise Exception   
+                logging.error(f"Error occured decoding: {msg}")
+                logging.error(error)  
 
            
 def decodeMultipartAIS(parts):
     """
     Decode multi-part AIS Messages
     """
-    multipart = []
-    for part in parts:
-        string_to_decode = prepDecodeString(part).replace("\r\n","")
-        if "AIVDM" in string_to_decode:
-            multipart.append(string_to_decode)
-    logging.debug(f"Raw Multipart - {multipart}")
-    decoded_message = decode(*multipart).asdict()
-    logging.debug(f"AIS Decoded Multipart - {decoded_message}")
     try:
+        multipart = []
+        for part in parts:
+            string_to_decode = prepDecodeString(part).replace("\r\n","")
+            if "AIVDM" in string_to_decode:
+                multipart.append(string_to_decode)
+        logging.debug(f"Raw Multipart - {multipart}")
+        decoded_message = decode(*multipart).asdict()
+        logging.debug(f"AIS Decoded Multipart - {decoded_message}")
         filterMsgs(decoded_message)
     except Exception as error:
+        logging.error(f"Error occured decoding: {parts}")
         logging.error(error)
-        raise Exception
     
 
 if __name__ == '__main__':
@@ -404,7 +404,8 @@ if __name__ == '__main__':
                             logging.debug(f"Raw - {row}")
                             logging.debug(f"Decoded utf-8 - {row_to_string}")
                             # Check for multipart msgs
-                            if 'g:1-2-' in row_to_string:
+                            # N.B. This solution only deals with 2 part msgs.
+                            if 'AIVDM,2,1' in row_to_string:
                                 first_part = row_to_string
                             # Check message is not part of multipart msg.
                             elif first_part == "":
@@ -417,8 +418,8 @@ if __name__ == '__main__':
                                         raise Exception
                                 else: decodeAIS(row_to_string)
                             # Check that we are dealing with the second part of a multipart msg.
-                            # N.B. This solution only deals with 2 part msgs atm.
-                            elif first_part !="" and 'g:2-2-' in row_to_string:
+                            # N.B. This solution only deals with 2 part msgs.
+                            elif first_part !="" and 'AIVDM,2,2' in row_to_string:
                                 logging.debug(f"First part  - {first_part}")
                                 logging.debug(f"Second part - {row_to_string}")
                                 parts = [first_part, row_to_string]
