@@ -499,7 +499,7 @@ _Standard Class B equipment position report_ | Standard position report for Clas
 }
 ```
 
-### Type 19 (Not Supported)
+### Type 19 (Position Data Supported)
 
 _Extended Class B equipment position report_ | **[No longer required]** Extended position report for Class B shipborne mobile equipment, contains additional static information.
 
@@ -675,7 +675,7 @@ _Multiple slot binary message with Communications State_ | Scheduled binary data
 }
 ```
 
-### Type 27 (Not Supported)
+### Type 27
 
 _Position report for long-range applications_ | Class A and Class B “SO” shipborne mobile equipment outside base station coverage.
 

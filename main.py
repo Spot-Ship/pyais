@@ -22,7 +22,7 @@ logLevel = os.environ.get("LOGLEVEL", logging.INFO)
 logfmt = '[%(levelname)s] %(asctime)s - %(message)s'
 logging.basicConfig(level=logLevel, format=logfmt)
 
-supportedAISmsgTypes = ['1','2','3','4','5','18']
+supportedAISmsgTypes = ['1','2','3','4','5','18','19','27']
 
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
@@ -42,7 +42,7 @@ def get_eta(msg_body):
             
 
 def get_attributes(msg_body):
-    if msg_body['msg_type'] in [1,2,3,4,18]:
+    if msg_body['msg_type'] in [1,2,3,4,18,19,27]:
         return {
             'Dimensions': [
                 {
@@ -192,7 +192,7 @@ def get_measures(msg_body):
                 'Type': 'VARCHAR'
             })
         return measures
-    if msg_body['msg_type'] == 18:
+    if msg_body['msg_type'] in [18,19]:
         return [
             {
                 'Name': 'longitude',
@@ -220,11 +220,39 @@ def get_measures(msg_body):
                 'Type': 'BIGINT'
             },
         ]
+    if msg_body['msg_type'] == 27:
+        return [
+            {
+                'Name': 'longitude',
+                'Value': str(msg_body['lon']),
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'latitude',
+                'Value': str(msg_body['lat']),
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'speed',
+                'Value': str(msg_body['speed']),
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'course',
+                'Value': str(msg_body['course']),
+                'Type': 'DOUBLE'
+            },
+            {
+                'Name': 'status',
+                'Value': str(msg_body['status']),
+                'Type': 'BIGINT'
+            },
+        ]
     return []
 
 
 def get_timestream_table(msg_type):
-    if msg_type in [1,2,3,4,18]:
+    if msg_type in [1,2,3,4,18,19,27]:
         return "Positions"
     if msg_type == 5:
         return "Status"
@@ -324,7 +352,7 @@ def decodeAIS(msg):
     Decode single part AIS Messages
     """
     string_to_decode = prepDecodeString(msg)
-    if string_to_decode.find("AIVDM") != -1:
+    if "AIVDM" in string_to_decode:
         try:
             decoded_message = decode(string_to_decode).asdict()
             logging.debug(f"AIS Decoded First - {decoded_message}")
