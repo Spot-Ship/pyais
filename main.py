@@ -318,7 +318,7 @@ def checksum(sentence):
     import re
     if re.search("\n$", sentence):
         sentence = sentence[:-1]
-    nmeadata,cksum = re.split('\*', sentence)
+    nmeadata,_ = re.split('\*', sentence)
     calc_cksum = 0
     for s in nmeadata:
         calc_cksum ^= ord(s)
@@ -330,13 +330,12 @@ def filterMsgs(msg):
     """
     Checks decoded msg is of a type we care about & sends it to process to stream it.
     """
-    if msg is not None:
-        if str(msg['msg_type']) in supportedAISmsgTypes:
-            try:
-                stream_message(msg)
-            except Exception as error:
-                logging.error(error)
-                raise Exception
+    if msg is not None and str(msg['msg_type']) in supportedAISmsgTypes:
+        try:
+            stream_message(msg)
+        except Exception as error:
+            logging.error(error)
+            raise Exception
 
 
 def prepDecodeString(sequence):
@@ -358,8 +357,8 @@ def decodeAIS(msg):
             logging.debug(f"AIS Decoded First - {decoded_message}")
             filterMsgs(decoded_message)
         except Exception as error:
-                logging.error(f"Error occured decoding: {msg}")
-                logging.error(error)  
+            logging.error(f"Error occured decoding: {msg}")
+            logging.error(error)  
 
            
 def decodeMultipartAIS(parts):
@@ -381,94 +380,106 @@ def decodeMultipartAIS(parts):
         logging.error(error)
     
 
+def getOrbcommSocket():
+    logging.info('Orbcomm Ingester Script Starting ...')
+    # Load the CA certificates used for validating the peer's certificate.
+    sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
+    sslContext.check_hostname = False
+    # Create an SSLSocket.                         
+    clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
+    secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False, )
+    # Only connect, no handshake.
+    logging.debug('Established connection')
+    # Explicit handshake.
+    secureClientSocket.do_handshake()
+    logging.debug("Complete SSL handshake")
+    # Get the certificate of the server and print.
+    serverCertificate = secureClientSocket.getpeercert()
+    logging.debug("Certificate obtained from the server:")
+    logging.debug(serverCertificate)
+    # TODO move these to envVar
+    user_name= "SSEH_Lss"
+    password= "tpWB3UkPnoF2"
+    try:
+        nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,user_name,password)
+        chksum_string = nmea_string[1:]
+        package = "{}{}\r\n".format(nmea_string, checksum(chksum_string))
+        b = bytearray()
+        b.extend(package.encode('utf-8'))
+        secureClientSocket.send(b)
+    except Exception as e:
+        logging.warning(e)
+    return secureClientSocket
+
+
 if __name__ == '__main__':
     while True:
         """
-        Connect via SSL to Orbcomm websocket and decode msgs to fire to Kinesis streams.
+        Connect via SSL to Orbcomm websocket and decode msgs to fire to Timestream Database.
         """
         logging.info('Orbcomm Ingester Script Starting ...')
-        # Load the CA certificates used for validating the peer's certificate.
-        sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
-        sslContext.check_hostname = False
-        # Create an SSLSocket.                         
-        clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
-        secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False, )
-        # Only connect, no handshake.
-        logging.debug('Established connection')
-        # Explicit handshake.
-        secureClientSocket.do_handshake()
-        logging.debug("Complete SSL handshake")
-        # Get the certificate of the server and print.
-        serverCertificate = secureClientSocket.getpeercert()
-        logging.debug("Certificate obtained from the server:")
-        logging.debug(serverCertificate)
-        # TODO move these to envVar
-        user_name= "SSEH_Lss"
-        password= "tpWB3UkPnoF2"
+        socket = getOrbcommSocket() 
         try:
-            nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,user_name,password)
-            chksum_string = nmea_string[1:]
-            package = "{}{}\r\n".format(nmea_string, checksum(chksum_string))
-            b = bytearray()
-            b.extend(package.encode('utf-8'))
-            secureClientSocket.send(b)
-        except Exception as e:
-            logging.warning(e)
-            continue
-        first_part = ""
-        parts = []
-        decoded_message = None
-        emptyMsgCounter = 0
-        emptyMsgTime = datetime.today();
-        try:
+            first_part = ""
+            parts = []
+            decoded_message = None
+            emptyMsgCounter = 0
+            emptyMsgTime = datetime.today();
             pool = Pool()
+            # Loop through messages from Orbcomm Stream
             while True:
                 try:
-                    row = secureClientSocket.recv(4096)
-                    if row !="":
-                        row_to_string = row.decode("utf-8")
-                        if row_to_string !="":
-                            emptyMsgCounter = 0
-                            logging.debug(f"Raw - {row}")
-                            logging.debug(f"Decoded utf-8 - {row_to_string}")
-                            # Check for multipart msgs
-                            # N.B. This solution only deals with 2 part msgs.
-                            if 'AIVDM,2,1' in row_to_string:
-                                first_part = row_to_string
-                            # Check message is not part of multipart msg.
-                            elif first_part == "":
-                                if multiprocessing:
-                                    try:
-                                        result = pool.apply_async(decodeAIS, [row_to_string])
-                                        logging.debug(result.get(timeout=1))
-                                    except Exception as error:
-                                        logging.error(error)
-                                        raise Exception
-                                else: decodeAIS(row_to_string)
-                            # Check that we are dealing with the second part of a multipart msg.
-                            # N.B. This solution only deals with 2 part msgs.
-                            elif first_part !="" and 'AIVDM,2,2' in row_to_string:
-                                logging.debug(f"First part  - {first_part}")
-                                logging.debug(f"Second part - {row_to_string}")
-                                parts = [first_part, row_to_string]
-                                if multiprocessing:
-                                    try:
-                                        result = pool.apply_async(decodeMultipartAIS, [parts])
-                                        logging.debug(result.get(timeout=1))
-                                    except Exception as error:
-                                        logging.error(error)
-                                        raise Exception
-                                else:
-                                    decodeMultipartAIS(parts)
-                                first_part = ""
+                    row = socket.recv(4096)
+                    if row == "":
+                        continue
+                    
+                    row_to_string = row.decode("utf-8")
+                    if row_to_string =="":
+                        emptyMsgCounter +=1
+                        if emptyMsgCounter == 1:
+                            emptyMsgTime = datetime.today();
+                        if emptyMsgCounter % 10000 == 0:
+                            logging.error(f"No msgs received since: {emptyMsgTime}")
+                        if emptyMsgCounter == 100000:
+                            raise Exception(f"Something interrupted the stream since: {emptyMsgTime}")
+                        continue
+                    
+                    emptyMsgCounter = 0
+                    logging.debug(f"Raw - {row}")
+                    logging.debug(f"Decoded utf-8 - {row_to_string}")
+                    
+                    # Check that we are dealing with a multipart msg.
+                    # N.B. This solution only deals with 2 part msgs.
+                    if first_part != "" and 'AIVDM,2,2' in row_to_string:
+                        logging.debug(f"First part  - {first_part}")
+                        logging.debug(f"Second part - {row_to_string}")
+                        parts = [first_part, row_to_string]
+                        if multiprocessing:
+                            try:
+                                result = pool.apply_async(decodeMultipartAIS, [parts])
+                                logging.debug(result.get(timeout=1))
+                            except Exception as error:
+                                logging.error(error)
                         else:
-                            emptyMsgCounter +=1
-                            if emptyMsgCounter == 1:
-                                emptyMsgTime = datetime.today();
-                            if emptyMsgCounter % 10000 == 0:
-                                logging.error(f"No msgs received since: {emptyMsgTime}")
-                            if emptyMsgCounter == 100000:
-                                raise Exception(f"Something interrupted the stream since {emptyMsgTime}")
+                            decodeMultipartAIS(parts)
+                        first_part = ""
+                        continue
+                    
+                    # Check for multipart msgs
+                    # N.B. This solution only deals with 2 part msgs.
+                    if 'AIVDM,2,1' in row_to_string:
+                        first_part = row_to_string
+                        continue
+                    
+                    if multiprocessing:
+                        try:
+                            result = pool.apply_async(decodeAIS, [row_to_string])
+                            logging.debug(result.get(timeout=1))
+                        except Exception as error:
+                            logging.error(error)
+                    else: 
+                        decodeAIS(row_to_string)
+                    continue
                 except Exception as error:
                     logging.error(error)
                     raise Exception
