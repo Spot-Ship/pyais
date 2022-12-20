@@ -289,7 +289,7 @@ def write_data_to_timestream(message):
         for rejected_record in error.response["RejectedRecords"]:
             logging.error(f"Rejected Index {str(rejected_record['RecordIndex'])}:{rejected_record['Reason']}")
             if 'ExistingVersion' in rejected_record:
-                logging.error(f"Rejected record existing version: {rejected_record['ExistingVersion']}")
+                logging.error(f"Existing Version so ignored message: {message}")
     except Exception as error:
         logging.info(f" Error occurred on {message}")
         logging.error(error)
