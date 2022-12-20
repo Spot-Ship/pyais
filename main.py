@@ -11,77 +11,83 @@ from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-multiprocessing = False
+multiprocessing_is_enabled = False
 
 # Context creation
-sslContext              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-sslContext.verify_mode  = ssl.CERT_REQUIRED
+ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+ssl_context.verify_mode  = ssl.CERT_REQUIRED
 
 # Setup logger - https://docs.python.org/3/library/logging.html#levels
-logLevel = os.environ.get("LOGLEVEL", logging.INFO)
-logfmt = '[%(levelname)s] %(asctime)s - %(message)s'
-logging.basicConfig(level=logLevel, format=logfmt)
+log_level = os.environ.get("LOGLEVEL", logging.INFO)
+log_format = '[%(levelname)s] %(asctime)s - %(message)s'
+logging.basicConfig(level=log_level, format=log_format)
 
-supportedAISmsgTypes = ['1','2','3','4','5','18','19','27']
+supported_msg_types = ['1','2','3','4','5','18','19','27']
 
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 
-def get_eta(msg_body):
-    if msg_body['month'] > 12:
-        msg_body['month'] = 0
-    if msg_body['day'] > 31:
-        msg_body['day'] = 0
-    if msg_body['hour'] >= 24:
-        msg_body['hour'] = 0
-    if msg_body['minute'] >= 60:
-        msg_body['minute'] = 0
+def get_eta(message):
+    """
+    Deals with the dirty data from AIS to create an eta timestamp
+    """
+    if message['month'] > 12:
+        message['month'] = 0
+    if message['day'] > 31:
+        message['day'] = 0
+    if message['hour'] >= 24:
+        message['hour'] = 0
+    if message['minute'] >= 60:
+        message['minute'] = 0
         
-    eta = datetime.today() + relativedelta(months=msg_body['month'], days=msg_body['day'], hours=msg_body['hour'], minutes=msg_body['minute'])
+    eta = datetime.today() + relativedelta(months=message['month'], days=message['day'], hours=message['hour'], minutes=message['minute'])
     return str(int(eta.timestamp()))
             
 
-def get_attributes(msg_body):
-    if msg_body['msg_type'] in [1,2,3,4,18,19,27]:
+def get_attributes(message):
+    """
+    Returns attribute by msg_type
+    """
+    if message['msg_type'] in [1,2,3,4,18,19,27]:
         return {
             'Dimensions': [
                 {
                     'Name': 'mmmsi',
-                    'Value': str(msg_body['mmsi']),
+                    'Value': str(message['mmsi']),
                     'DimensionValueType': 'VARCHAR'
                 }
             ],
             'MeasureName': 'position',
             'MeasureValueType': 'MULTI'
         }
-    if msg_body['msg_type'] == 5:
+    if message['msg_type'] == 5:
         dimensions = [
             {
                 'Name': 'mmmsi',
-                'Value': str(msg_body['mmsi']),
+                'Value': str(message['mmsi']),
                 'DimensionValueType': 'VARCHAR'
             },
             {
                 'Name': 'imo',
-                'Value': str(msg_body['imo']),
+                'Value': str(message['imo']),
                 'DimensionValueType': 'VARCHAR'
             },
             {
                 'Name': 'ship_type',
-                'Value': str(msg_body['ship_type']),
+                'Value': str(message['ship_type']),
                 'DimensionValueType': 'VARCHAR'
             },
         ]
-        if msg_body['shipname'] != "":
+        if message['shipname'] != "":
             dimensions.insert(2, {
                 'Name': 'name',
-                'Value': str(msg_body['shipname']),
+                'Value': str(message['shipname']),
                 'DimensionValueType': 'VARCHAR'
             })
-        if msg_body['callsign'] != "":
+        if message['callsign'] != "":
             dimensions.insert(3, {
                 'Name': 'callsign',
-                'Value': str(msg_body['callsign']),
+                'Value': str(message['callsign']),
                 'DimensionValueType': 'VARCHAR'
             })
         return {
@@ -92,159 +98,159 @@ def get_attributes(msg_body):
     return {}
 
 
-def get_measures(msg_body): 
+def get_measures(message): 
     """
-    Returns measure by msg type
+    Returns measure by msg_type
     """
-    if msg_body['msg_type'] in [1,2,3]:
+    if message['msg_type'] in [1,2,3]:
         return [
             {
                 'Name': 'longitude',
-                'Value': str(msg_body['lon']),
+                'Value': str(message['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': str(msg_body['lat']),
+                'Value': str(message['lat']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'speed',
-                'Value': str(msg_body['speed']),
+                'Value': str(message['speed']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'course',
-                'Value': str(msg_body['course']),
+                'Value': str(message['course']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'turn',
-                'Value': str(msg_body['turn']),
+                'Value': str(message['turn']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'status',
-                'Value': str(msg_body['status']),
+                'Value': str(message['status']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'maneuver',
-                'Value': str(msg_body['maneuver']),
+                'Value': str(message['maneuver']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'heading',
-                'Value': str(msg_body['heading']),
+                'Value': str(message['heading']),
                 'Type': 'BIGINT'
             },
         ]
-    if msg_body['msg_type'] == 4:
+    if message['msg_type'] == 4:
         return [
             {
                 'Name': 'longitude',
-                'Value': str(msg_body['lon']),
+                'Value': str(message['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': str(msg_body['lat']),
+                'Value': str(message['lat']),
                 'Type': 'DOUBLE'
             },
         ]
-    if msg_body['msg_type'] == 5:
+    if message['msg_type'] == 5:
         measures = [
             {
                 'Name': 'to_bow',
-                'Value': str(msg_body['to_bow']),
+                'Value': str(message['to_bow']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_stern',
-                'Value': str(msg_body['to_stern']),
+                'Value': str(message['to_stern']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_port',
-                'Value': str(msg_body['to_port']),
+                'Value': str(message['to_port']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'to_starboard',
-                'Value': str(msg_body['to_starboard']),
+                'Value': str(message['to_starboard']),
                 'Type': 'BIGINT'
             },
             {
                 'Name': 'draught',
-                'Value': str(msg_body['draught']),
+                'Value': str(message['draught']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'eta',
-                'Value': get_eta(msg_body),
+                'Value': get_eta(message),
                 'Type': 'TIMESTAMP'
             },
         ]
-        if msg_body['destination'] != "":
+        if message['destination'] != "":
             measures.insert(0, {
                 'Name': 'destination',
-                'Value': str(msg_body['destination']),
+                'Value': str(message['destination']),
                 'Type': 'VARCHAR'
             })
         return measures
-    if msg_body['msg_type'] in [18,19]:
+    if message['msg_type'] in [18,19]:
         return [
             {
                 'Name': 'longitude',
-                'Value': str(msg_body['lon']),
+                'Value': str(message['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': str(msg_body['lat']),
+                'Value': str(message['lat']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'speed',
-                'Value': str(msg_body['speed']),
+                'Value': str(message['speed']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'course',
-                'Value': str(msg_body['course']),
+                'Value': str(message['course']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'heading',
-                'Value': str(msg_body['heading']),
+                'Value': str(message['heading']),
                 'Type': 'BIGINT'
             },
         ]
-    if msg_body['msg_type'] == 27:
+    if message['msg_type'] == 27:
         return [
             {
                 'Name': 'longitude',
-                'Value': str(msg_body['lon']),
+                'Value': str(message['lon']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'latitude',
-                'Value': str(msg_body['lat']),
+                'Value': str(message['lat']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'speed',
-                'Value': str(msg_body['speed']),
+                'Value': str(message['speed']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'course',
-                'Value': str(msg_body['course']),
+                'Value': str(message['course']),
                 'Type': 'DOUBLE'
             },
             {
                 'Name': 'status',
-                'Value': str(msg_body['status']),
+                'Value': str(message['status']),
                 'Type': 'BIGINT'
             },
         ]
@@ -252,6 +258,9 @@ def get_measures(msg_body):
 
 
 def get_timestream_table(msg_type):
+    """
+    Get which table you are writing to from the msg_type
+    """
     if msg_type in [1,2,3,4,18,19,27]:
         return "Positions"
     if msg_type == 5:
@@ -259,216 +268,236 @@ def get_timestream_table(msg_type):
     return ""
     
 
-def put_timestream(msg_body):
+def write_data_to_timestream(message):
     """
-    Inserts msg to timestream
+    Inserts message to timestream
     """
-    logging.debug(msg_body)
+    logging.debug(message)
     now = round(time.time())
     records = [{
         'Time': str(now),
         'TimeUnit': 'SECONDS',
         'Version': now,
-        'MeasureValues': get_measures(msg_body)
+        'MeasureValues': get_measures(message)
     }]
     try:
-        logging.debug(f"Writing to {get_timestream_table(msg_body['msg_type'])}")
+        logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
         logging.debug(records)
-        return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(msg_body['msg_type']), Records=records, CommonAttributes=get_attributes(msg_body))
-    except write_client.exceptions.RejectedRecordsException as err:
-        logging.error(f"RejectedRecords: {err}")
-        for rr in err.response["RejectedRecords"]:
-            logging.error(f"Rejected Index {str(rr['RecordIndex'])}:{rr['Reason']}")
-            if 'ExistingVersion' in rr:
-                logging.error(f"Rejected record existing version: {rr['ExistingVersion']}")
-    except Exception as err:
-        logging.info(f" Error occurred on {msg_body}")
-        logging.error(err)
+        return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(message['msg_type']), Records=records, CommonAttributes=get_attributes(message))
+    except write_client.exceptions.RejectedRecordsException as error:
+        logging.error(f"RejectedRecords: {error}")
+        for rejected_record in error.response["RejectedRecords"]:
+            logging.error(f"Rejected Index {str(rejected_record['RecordIndex'])}:{rejected_record['Reason']}")
+            if 'ExistingVersion' in rejected_record:
+                logging.error(f"Existing Version so ignored message: {message}")
+    except Exception as error:
+        logging.info(f" Error occurred on {message}")
+        logging.error(error)
 
 
-def stream_message(msg_body):
+def prep_message_for_timestream(message):
     """
     Filters & preps for Timestream.
     """
     try:
-        msg_body['status'] = msg_body['status'].decode("utf-8")
-        msg_body['status'] = msg_body['status'].split('.')[1].split(':')[0]
+        message['status'] = message['status'].decode("utf-8")
+        message['status'] = message['status'].split('.')[1].split(':')[0]
     except:
         pass
     try:
-        msg_body['maneuver'] = msg_body['maneuver'].decode("utf-8")
-        msg_body['maneuver'] = msg_body['maneuver'].split('.')[1].split(':')[0]
+        message['maneuver'] = message['maneuver'].decode("utf-8")
+        message['maneuver'] = message['maneuver'].split('.')[1].split(':')[0]
     except:
         pass
     try:
-        if (msg_body['turn']) == -0.0:
-            msg_body['turn'] = 0.0
+        if (message['turn']) == -0.0:
+            message['turn'] = 0.0
     except:
         pass
     try:
-        put_response = put_timestream(msg_body)
-    except Exception as err:
-        logging.error(f"Kinesis - Error Msg: {err} - Processing: {str(msg_body)}")
+        timestream_response = write_data_to_timestream(message)
+    except Exception as error:
+        logging.error(f"Kinesis - Error Msg: {error} - Processing: {str(message)}")
         raise Exception
     else:
-        return put_response
+        return timestream_response
 
 
-def checksum(sentence):
-    import re
-    if re.search("\n$", sentence):
-        sentence = sentence[:-1]
-    nmeadata,cksum = re.split('\*', sentence)
-    calc_cksum = 0
-    for s in nmeadata:
-        calc_cksum ^= ord(s)
-    result = str(hex(calc_cksum)).split("x")[1]
-    return result
-
-
-def filterMsgs(msg):
+def filter_messages(message):
     """
-    Checks decoded msg is of a type we care about & sends it to process to stream it.
+    Checks decoded message is of a type we care about & sends it to process it.
     """
-    if msg is not None:
-        if str(msg['msg_type']) in supportedAISmsgTypes:
-            try:
-                stream_message(msg)
-            except Exception as error:
-                logging.error(error)
-                raise Exception
+    if message is not None and str(message['msg_type']) in supported_msg_types:
+        try:
+            prep_message_for_timestream(message)
+        except Exception as error:
+            logging.error(error)
+            raise Exception
 
 
-def prepDecodeString(sequence):
-    if '!' in sequence:
-        data = sequence.split("!")
-        return '!' + str(data[1])
+def prep_message_for_decoding(message):
+    if '!' in message:
+        message_parts = message.split("!")
+        return '!' + str(message_parts[1])
     else:
-        return '!' + sequence
+        return '!' + message
 
 
-def decodeAIS(msg):
+def decode_single_part_message(message):
     """
     Decode single part AIS Messages
     """
-    string_to_decode = prepDecodeString(msg)
-    if "AIVDM" in string_to_decode:
+    prepped_message = prep_message_for_decoding(message)
+    if "AIVDM" in prepped_message:
         try:
-            decoded_message = decode(string_to_decode).asdict()
+            decoded_message = decode(prepped_message).asdict()
             logging.debug(f"AIS Decoded First - {decoded_message}")
-            filterMsgs(decoded_message)
+            filter_messages(decoded_message)
         except Exception as error:
-                logging.error(f"Error occured decoding: {msg}")
-                logging.error(error)  
+            logging.error(f"Error occured decoding: {message}")
+            logging.error(error)  
 
            
-def decodeMultipartAIS(parts):
+def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
     """
     try:
-        multipart = []
+        multipart_message = []
         for part in parts:
-            string_to_decode = prepDecodeString(part).replace("\r\n","")
-            if "AIVDM" in string_to_decode:
-                multipart.append(string_to_decode)
-        logging.debug(f"Raw Multipart - {multipart}")
-        decoded_message = decode(*multipart).asdict()
-        logging.debug(f"AIS Decoded Multipart - {decoded_message}")
-        filterMsgs(decoded_message)
+            prepped_part = prep_message_for_decoding(part).replace("\r\n","")
+            if "AIVDM" in prepped_part:
+                multipart_message.append(prepped_part)
+        logging.debug(f"Raw Multipart - {multipart_message}")
+        decodedAISMessage = decode(*multipart_message).asdict()
+        logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
+        filter_messages(decodedAISMessage)
     except Exception as error:
         logging.error(f"Error occured decoding: {parts}")
         logging.error(error)
+
+
+def checksum(nmea_string):
+    """
+    Create Checksum from nmea_string
+    """
+    import re
+    if re.search("\n$", nmea_string):
+        nmea_string = nmea_string[:-1]
+    nmea_data,_ = re.split('\*', nmea_string)
+    calculated_checksum = 0
+    for s in nmea_data:
+        calculated_checksum ^= ord(s)
+    result = str(hex(calculated_checksum)).split("x")[1]
+    return result
     
 
+def get_orbcomm_socket():
+    """
+    Connect via SSL to Orbcomm websocket
+    """
+    logging.info('Orbcomm Ingester Script Starting ...')
+    # Load the CA certificates used for validating the peer's certificate.
+    ssl_context.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
+    ssl_context.check_hostname = False
+    # Create an SSLSocket.                         
+    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9054))
+    secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
+    # Only connect, no handshake.
+    logging.debug('Established connection')
+    # Explicit handshake.
+    secure_client_socket.do_handshake()
+    logging.debug("Complete SSL handshake")
+    # Get the certificate of the server and print.
+    server_certificate = secure_client_socket.getpeercert()
+    logging.debug("Certificate obtained from the server:")
+    logging.debug(server_certificate)
+    # TODO move these to envVar
+    username= "SSEH_Lss"
+    password= "tpWB3UkPnoF2"
+    try:
+        nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,username,password)
+        checksum_string = nmea_string[1:]
+        package = "{}{}\r\n".format(nmea_string, checksum(checksum_string))
+        bytes = bytearray()
+        bytes.extend(package.encode('utf-8'))
+        secure_client_socket.send(bytes)
+    except Exception as error:
+        logging.warning(error)
+    return secure_client_socket
+
+
+
 if __name__ == '__main__':
+    """
+    Main Thread:
+        Connects to Orbcomm websocket, 
+        Decodes AIS messages,
+        Sends relevant data to Timestream Database.
+    """
     while True:
-        """
-        Connect via SSL to Orbcomm websocket and decode msgs to fire to Kinesis streams.
-        """
         logging.info('Orbcomm Ingester Script Starting ...')
-        # Load the CA certificates used for validating the peer's certificate.
-        sslContext.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
-        sslContext.check_hostname = False
-        # Create an SSLSocket.                         
-        clientSocket = socket.create_connection(("globalais2.orbcomm.net", 9054))
-        secureClientSocket = sslContext.wrap_socket(clientSocket, do_handshake_on_connect=False, )
-        # Only connect, no handshake.
-        logging.debug('Established connection')
-        # Explicit handshake.
-        secureClientSocket.do_handshake()
-        logging.debug("Complete SSL handshake")
-        # Get the certificate of the server and print.
-        serverCertificate = secureClientSocket.getpeercert()
-        logging.debug("Certificate obtained from the server:")
-        logging.debug(serverCertificate)
-        # TODO move these to envVar
-        user_name= "SSEH_Lss"
-        password= "tpWB3UkPnoF2"
+        socket = get_orbcomm_socket() 
         try:
-            nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,user_name,password)
-            chksum_string = nmea_string[1:]
-            package = "{}{}\r\n".format(nmea_string, checksum(chksum_string))
-            b = bytearray()
-            b.extend(package.encode('utf-8'))
-            secureClientSocket.send(b)
-        except Exception as e:
-            logging.warning(e)
-            continue
-        first_part = ""
-        parts = []
-        decoded_message = None
-        emptyMsgCounter = 0
-        emptyMsgTime = datetime.today();
-        try:
-            pool = Pool()
+            first_part_of_multipart_message = ""
+            multipart_message = []
+            empty_message_counter = 0
+            time_of_first_encountered_empty_message = datetime.today();
+            process_pool = Pool()
+            # Loop through messages from Orbcomm Stream
             while True:
                 try:
-                    row = secureClientSocket.recv(4096)
-                    if row !="":
-                        row_to_string = row.decode("utf-8")
-                        if row_to_string !="":
-                            emptyMsgCounter = 0
-                            logging.debug(f"Raw - {row}")
-                            logging.debug(f"Decoded utf-8 - {row_to_string}")
-                            # Check for multipart msgs
-                            # N.B. This solution only deals with 2 part msgs.
-                            if 'AIVDM,2,1' in row_to_string:
-                                first_part = row_to_string
-                            # Check message is not part of multipart msg.
-                            elif first_part == "":
-                                if multiprocessing:
-                                    try:
-                                        result = pool.apply_async(decodeAIS, [row_to_string])
-                                        logging.debug(result.get(timeout=1))
-                                    except Exception as error:
-                                        logging.error(error)
-                                        raise Exception
-                                else: decodeAIS(row_to_string)
-                            # Check that we are dealing with the second part of a multipart msg.
-                            # N.B. This solution only deals with 2 part msgs.
-                            elif first_part !="" and 'AIVDM,2,2' in row_to_string:
-                                logging.debug(f"First part  - {first_part}")
-                                logging.debug(f"Second part - {row_to_string}")
-                                parts = [first_part, row_to_string]
-                                if multiprocessing:
-                                    try:
-                                        result = pool.apply_async(decodeMultipartAIS, [parts])
-                                        logging.debug(result.get(timeout=1))
-                                    except Exception as error:
-                                        logging.error(error)
-                                        raise Exception
-                                else:
-                                    decodeMultipartAIS(parts)
-                                first_part = ""
+                    raw_message = socket.recv(4096)
+                    if raw_message == "":
+                        continue
+                    
+                    encoded_message = raw_message.decode("utf-8")
+                    if encoded_message =="":
+                        empty_message_counter +=1
+                        if empty_message_counter == 1:
+                            time_of_first_encountered_empty_message = datetime.today();
+                        if empty_message_counter % 10000 == 0:
+                            logging.error(f"No msgs received since: {time_of_first_encountered_empty_message}")
+                        if empty_message_counter == 100000:
+                            raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
+                        continue
+                    
+                    empty_message_counter = 0
+                    logging.debug(f"Raw - {raw_message}")
+                    logging.debug(f"Decoded utf-8 - {encoded_message}")
+                    
+                    # Check that we are dealing with the second part of a multipart msg.
+                    # N.B. This solution only deals with 2 part msgs.
+                    if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
+                        logging.debug(f"First part  - {first_part_of_multipart_message}")
+                        logging.debug(f"Second part - {encoded_message}")
+                        multipart_message = [first_part_of_multipart_message, encoded_message]
+                        if multiprocessing_is_enabled:
+                            try:
+                                result = process_pool.apply_async(decode_multipart_message, [multipart_message])
+                                logging.debug(result.get(timeout=1))
+                            except Exception as error:
+                                logging.error(error)
                         else:
-                            emptyMsgCounter +=1
-                            if emptyMsgCounter == 1:
-                                emptyMsgTime = datetime.today();
-                            if emptyMsgCounter % 10000 == 0:
-                                logging.error(f"No msgs received since: {emptyMsgTime}")
-                            if emptyMsgCounter == 100000:
-                                raise Exception(f"Something interrupted the stream since {emptyMsgTime}")
+                            decode_multipart_message(multipart_message)
+                        first_part_of_multipart_message = ""
+                        continue
+                    
+                    # Check for multipart msgs
+                    # N.B. This solution only deals with 2 part msgs.
+                    if 'AIVDM,2,1' in encoded_message:
+                        first_part_of_multipart_message = encoded_message
+                        continue
+                    
+                    if multiprocessing_is_enabled:
+                        try:
+                            result = process_pool.apply_async(decode_single_part_message, [encoded_message])
+                            logging.debug(result.get(timeout=1))
+                        except Exception as error:
+                            logging.error(error)
+                    else: 
+                        decode_single_part_message(encoded_message)
+                    continue
                 except Exception as error:
                     logging.error(error)
                     raise Exception

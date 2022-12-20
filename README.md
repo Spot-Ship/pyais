@@ -50,6 +50,8 @@ You can edit the task definition to edit the service configuration in `taskdef.j
 
 Uses `Github` IAM user credentials in repo secret & `orbcomm-ingester`ECR repo.
 
+:exclamation: **CICD currently does not include tagging a release so this must be done manually.** :exclamation:
+
 ---
 
 ## AIS Message types
