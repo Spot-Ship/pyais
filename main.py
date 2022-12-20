@@ -430,7 +430,7 @@ def get_orbcomm_socket():
 
 if __name__ == '__main__':
     """
-        Main thread:
+    Main Thread:
         Connects to Orbcomm websocket, 
         Decodes AIS messages,
         Sends relevant data to Timestream Database.
