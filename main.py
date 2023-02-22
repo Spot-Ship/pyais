@@ -441,9 +441,11 @@ if __name__ == '__main__':
         try:
             first_part_of_multipart_message = ""
             multipart_message = []
+            start_time = datetime.today();
+            message_counter = 0
             empty_message_counter = 0
-            time_of_first_encountered_empty_message = datetime.today();
-            time_to_throw_an_exception = time_of_first_encountered_empty_message;
+            time_of_first_encountered_empty_message = start_time;
+            time_to_throw_an_exception = start_time;
             process_pool = Pool()
             # Loop through messages from Orbcomm Stream
             while True:
@@ -457,12 +459,19 @@ if __name__ == '__main__':
                         empty_message_counter +=1
                         if empty_message_counter == 1:
                             time_of_first_encountered_empty_message = datetime.today();
-                            time_to_throw_an_exception = time_of_first_encountered_empty_message + datetime.timedelta(seconds=10)
+                            time_to_throw_an_exception = time_of_first_encountered_empty_message + datetime.timedelta(seconds=5)
                         if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
                     
                     empty_message_counter = 0
+                    message_counter +=1
+                    if message_counter % 10000 == 0:
+                        now = datetime.today()
+                        interval = now - start_time
+                        logging.info(f"10,000 messages processed in {interval.totalSeconds()} seconds")
+                        start_time = now
+
                     logging.debug(f"Raw - {raw_message}")
                     logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
