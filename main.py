@@ -469,7 +469,7 @@ if __name__ == '__main__':
                     if message_counter % 1000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"1000 messages processed in {interval.totalSeconds()} seconds")
+                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
                         start_time = now
 
                     logging.debug(f"Raw - {raw_message}")
