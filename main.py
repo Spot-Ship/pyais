@@ -456,9 +456,8 @@ if __name__ == '__main__':
                         empty_message_counter +=1
                         if empty_message_counter == 1:
                             time_of_first_encountered_empty_message = datetime.today();
-                        if empty_message_counter % 10000 == 0:
-                            logging.error(f"No msgs received since: {time_of_first_encountered_empty_message}")
-                        if empty_message_counter == 100000:
+                            time_to_throw_an_exception = time_of_first_encountered_empty_message + datetime.timedelta(seconds=10)
+                        if time_to_throw_an_exception < datetime.today():
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
                     
