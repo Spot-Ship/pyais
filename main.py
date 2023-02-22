@@ -443,7 +443,7 @@ if __name__ == '__main__':
             multipart_message = []
             empty_message_counter = 0
             time_of_first_encountered_empty_message = datetime.today();
-            time_to_throw_an_exception = datetime.today();
+            time_to_throw_an_exception = time_of_first_encountered_empty_message;
             process_pool = Pool()
             # Loop through messages from Orbcomm Stream
             while True:
@@ -458,7 +458,7 @@ if __name__ == '__main__':
                         if empty_message_counter == 1:
                             time_of_first_encountered_empty_message = datetime.today();
                             time_to_throw_an_exception = time_of_first_encountered_empty_message + datetime.timedelta(seconds=10)
-                        if empty_message_counter > 100000 and time_to_throw_an_exception < datetime.today():
+                        if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
                     
