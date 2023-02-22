@@ -466,7 +466,7 @@ if __name__ == '__main__':
                     
                     empty_message_counter = 0
                     message_counter +=1
-                    if message_counter % 10000 == 0:
+                    if message_counter % 1000 == 0:
                         now = datetime.today()
                         interval = now - start_time
                         logging.info(f"10,000 messages processed in {interval.totalSeconds()} seconds")
