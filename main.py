@@ -5,22 +5,17 @@ from pyais import decode
 import boto3
 from botocore.config import Config
 import certifi
-import os
+from os import environ, path
 import logging
-from multiprocessing.pool import ThreadPool
-from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-
-multiprocessing_is_enabled = False
-multithreading_is_enabled = True
 
 # Context creation
 ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.verify_mode  = ssl.CERT_REQUIRED
 
 # Setup logger - https://docs.python.org/3/library/logging.html#levels
-log_level = os.environ.get("LOGLEVEL", logging.INFO)
+log_level = environ.get("LOGLEVEL", logging.INFO)
 log_format = '[%(levelname)s] %(asctime)s - %(message)s'
 logging.basicConfig(level=log_level, format=log_format)
 
@@ -274,7 +269,7 @@ def write_data_to_timestream(message):
     """
     Inserts message to timestream
     """
-    logging.debug(message)
+    # logging.debug(message)
     now = round(time.time())
     records = [{
         'Time': str(now),
@@ -283,39 +278,37 @@ def write_data_to_timestream(message):
         'MeasureValues': get_measures(message)
     }]
     try:
-        logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
-        logging.debug(records)
+        # logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
+        # logging.debug(records)
         return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(message['msg_type']), Records=records, CommonAttributes=get_attributes(message))
     except write_client.exceptions.RejectedRecordsException as error:
-        logging.error(f"RejectedRecords: {error}")
-        for rejected_record in error.response["RejectedRecords"]:
-            logging.error(f"Rejected Index {str(rejected_record['RecordIndex'])}:{rejected_record['Reason']}")
-            if 'ExistingVersion' in rejected_record:
-                logging.error(f"Existing Version so ignored message: {message}")
+        # logging.debug(f"RejectedRecords: {error}")
+        return
     except Exception as error:
-        logging.info(f" Error occurred on {message}")
-        logging.error(error)
+        logging.error(f" Error occurred on {message} | Error Message | {error}")
 
 
 def prep_message_for_timestream(message):
     """
     Filters & preps for Timestream.
     """
-    try:
-        message['status'] = message['status'].decode("utf-8")
-        message['status'] = message['status'].split('.')[1].split(':')[0]
-    except:
-        pass
-    try:
-        message['maneuver'] = message['maneuver'].decode("utf-8")
-        message['maneuver'] = message['maneuver'].split('.')[1].split(':')[0]
-    except:
-        pass
-    try:
-        if (message['turn']) == -0.0:
-            message['turn'] = 0.0
-    except:
-        pass
+    if message['msg_type'] in [1,2,3,27]:
+        try:
+            message['status'] = message['status'].decode("utf-8")
+            message['status'] = message['status'].split('.')[1].split(':')[0]
+        except:
+            pass
+    if message['msg_type'] in [1,2,3]:
+        try:
+            message['maneuver'] = message['maneuver'].decode("utf-8")
+            message['maneuver'] = message['maneuver'].split('.')[1].split(':')[0]
+        except:
+            pass
+        try:
+            if (message['turn']) == -0.0:
+                message['turn'] = 0.0
+        except:
+            pass
     try:
         timestream_response = write_data_to_timestream(message)
     except Exception as error:
@@ -353,30 +346,35 @@ def decode_single_part_message(message):
     if "AIVDM" in prepped_message:
         try:
             decoded_message = decode(prepped_message).asdict()
-            logging.debug(f"AIS Decoded First - {decoded_message}")
+            # logging.debug(f"AIS Decoded First - {decoded_message}")
             filter_messages(decoded_message)
         except Exception as error:
-            logging.error(f"Error occured decoding: {message}")
-            logging.error(error)  
+            logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
 
-           
+
+def prep_multipart_message_for_decoding(part):
+    return prep_message_for_decoding(part).replace("\r\n","")
+
+def is_valid_multipart_part(part):
+    return "AIVDM" in part
+               
 def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
     """
     try:
+        # multipart_message = filter(is_valid_multipart_part ,map(prep_multipart_message_for_decoding, parts))
         multipart_message = []
         for part in parts:
             prepped_part = prep_message_for_decoding(part).replace("\r\n","")
             if "AIVDM" in prepped_part:
                 multipart_message.append(prepped_part)
-        logging.debug(f"Raw Multipart - {multipart_message}")
+        # logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
-        logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
+        # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
         filter_messages(decodedAISMessage)
     except Exception as error:
-        logging.error(f"Error occured decoding: {parts}")
-        logging.error(error)
+        logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
 
 
 def checksum(nmea_string):
@@ -400,20 +398,20 @@ def get_orbcomm_socket():
     """
     logging.info('Orbcomm Ingester Script Starting ...')
     # Load the CA certificates used for validating the peer's certificate.
-    ssl_context.load_verify_locations(cafile=os.path.relpath(certifi.where()),capath=None, cadata=None)
+    ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
     ssl_context.check_hostname = False
     # Create an SSLSocket.                         
     client_socket = socket.create_connection(("globalais2.orbcomm.net", 9054))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
-    logging.debug('Established connection')
+    # logging.debug('Established connection')
     # Explicit handshake.
     secure_client_socket.do_handshake()
-    logging.debug("Complete SSL handshake")
+    # logging.debug("Complete SSL handshake")
     # Get the certificate of the server and print.
-    server_certificate = secure_client_socket.getpeercert()
-    logging.debug("Certificate obtained from the server:")
-    logging.debug(server_certificate)
+    # server_certificate = secure_client_socket.getpeercert()
+    # logging.debug("Certificate obtained from the server:")
+    # logging.debug(server_certificate)
     # TODO move these to envVar
     username= "SSEH_Lss"
     password= "tpWB3UkPnoF2"
@@ -443,13 +441,8 @@ if __name__ == '__main__':
         try:
             first_part_of_multipart_message = ""
             multipart_message = []
-            start_time = datetime.today();
-            message_counter = 0
-            empty_message_counter = 0
-            time_of_first_encountered_empty_message = start_time;
-            time_to_throw_an_exception = start_time;
-            process_pool = Pool()
-            thread_pool = ThreadPool(processes=1000)
+            start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
+            message_counter, empty_message_counter = 0, 0
             
             # Loop through messages from Orbcomm Stream
             while True:
@@ -476,29 +469,16 @@ if __name__ == '__main__':
                         logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
                         start_time = now
 
-                    logging.debug(f"Raw - {raw_message}")
-                    logging.debug(f"Decoded utf-8 - {encoded_message}")
+                    # logging.debug(f"Raw - {raw_message}")
+                    # logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
                     # Check that we are dealing with the second part of a multipart msg.
                     # N.B. This solution only deals with 2 part msgs.
                     if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
-                        logging.debug(f"First part  - {first_part_of_multipart_message}")
-                        logging.debug(f"Second part - {encoded_message}")
+                        # logging.debug(f"First part  - {first_part_of_multipart_message}")
+                        # logging.debug(f"Second part - {encoded_message}")
                         multipart_message = [first_part_of_multipart_message, encoded_message]
-                        if multiprocessing_is_enabled:
-                            try:
-                                result = process_pool.apply_async(decode_multipart_message, [multipart_message])
-                                logging.debug(result.get(timeout=1))
-                            except Exception as error:
-                                logging.error(error)
-                        elif multithreading_is_enabled:
-                            try:
-                                result = thread_pool.apply_async(decode_multipart_message, [multipart_message])
-                                logging.debug(result.get(timeout=1))
-                            except Exception as error:
-                                logging.error(error)        
-                        else:
-                            decode_multipart_message(multipart_message)
+                        decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
                         continue
                     
@@ -508,20 +488,7 @@ if __name__ == '__main__':
                         first_part_of_multipart_message = encoded_message
                         continue
                     
-                    if multiprocessing_is_enabled:
-                        try:
-                            result = process_pool.apply_async(decode_single_part_message, [encoded_message])
-                            logging.debug(result.get(timeout=1))
-                        except Exception as error:
-                            logging.error(error)
-                    if multithreading_is_enabled:
-                        try:
-                            result = thread_pool.apply_async(decode_single_part_message, [encoded_message])
-                            logging.debug(result.get(timeout=1))
-                        except Exception as error:
-                            logging.error(error)
-                    else: 
-                        decode_single_part_message(encoded_message)
+                    decode_single_part_message(encoded_message)
                     continue
                 except Exception as error:
                     logging.error(error)
