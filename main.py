@@ -525,7 +525,7 @@ if __name__ == '__main__':
                     continue
                 except Exception as error:
                     logging.error(error)
-                    raise Exception
+                    raise error
         except Exception as error:
             logging.error(error)
-            raise Exception
+            raise error
