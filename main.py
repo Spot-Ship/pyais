@@ -8,8 +8,7 @@ import certifi
 import os
 import logging
 from multiprocessing import Pool
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 multiprocessing_is_enabled = False
