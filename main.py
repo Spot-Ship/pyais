@@ -7,13 +7,8 @@ from botocore.config import Config
 import certifi
 import os
 import logging
-from multiprocessing.pool import ThreadPool
-from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-
-multiprocessing_is_enabled = True
-multithreading_is_enabled = False
 
 # Context creation
 ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -448,8 +443,6 @@ if __name__ == '__main__':
             empty_message_counter = 0
             time_of_first_encountered_empty_message = start_time;
             time_to_throw_an_exception = start_time;
-            process_pool = Pool()
-            thread_pool = ThreadPool(processes=1000)
             
             # Loop through messages from Orbcomm Stream
             while True:
@@ -485,20 +478,7 @@ if __name__ == '__main__':
                         logging.debug(f"First part  - {first_part_of_multipart_message}")
                         logging.debug(f"Second part - {encoded_message}")
                         multipart_message = [first_part_of_multipart_message, encoded_message]
-                        if multiprocessing_is_enabled:
-                            try:
-                                result = process_pool.apply_async(decode_multipart_message, [multipart_message])
-                                logging.debug(result.get(timeout=1))
-                            except Exception as error:
-                                logging.error(error)
-                        elif multithreading_is_enabled:
-                            try:
-                                result = thread_pool.apply_async(decode_multipart_message, [multipart_message])
-                                logging.debug(result.get(timeout=1))
-                            except Exception as error:
-                                logging.error(error)        
-                        else:
-                            decode_multipart_message(multipart_message)
+                        decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
                         continue
                     
@@ -508,20 +488,7 @@ if __name__ == '__main__':
                         first_part_of_multipart_message = encoded_message
                         continue
                     
-                    if multiprocessing_is_enabled:
-                        try:
-                            result = process_pool.apply_async(decode_single_part_message, [encoded_message])
-                            logging.debug(result.get(timeout=1))
-                        except Exception as error:
-                            logging.error(error)
-                    if multithreading_is_enabled:
-                        try:
-                            result = thread_pool.apply_async(decode_single_part_message, [encoded_message])
-                            logging.debug(result.get(timeout=1))
-                        except Exception as error:
-                            logging.error(error)
-                    else: 
-                        decode_single_part_message(encoded_message)
+                    decode_single_part_message(encoded_message)
                     continue
                 except Exception as error:
                     logging.error(error)
