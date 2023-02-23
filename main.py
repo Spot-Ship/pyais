@@ -7,11 +7,13 @@ from botocore.config import Config
 import certifi
 import os
 import logging
+from multiprocessing.pool import ThreadPool
 from multiprocessing import Pool
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 multiprocessing_is_enabled = False
+multithreading_is_enabled = True
 
 # Context creation
 ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -441,9 +443,14 @@ if __name__ == '__main__':
         try:
             first_part_of_multipart_message = ""
             multipart_message = []
+            start_time = datetime.today();
+            message_counter = 0
             empty_message_counter = 0
-            time_of_first_encountered_empty_message = datetime.today();
+            time_of_first_encountered_empty_message = start_time;
+            time_to_throw_an_exception = start_time;
             process_pool = Pool()
+            thread_pool = ThreadPool(processes=1000)
+            
             # Loop through messages from Orbcomm Stream
             while True:
                 try:
@@ -456,13 +463,19 @@ if __name__ == '__main__':
                         empty_message_counter +=1
                         if empty_message_counter == 1:
                             time_of_first_encountered_empty_message = datetime.today();
-                        if empty_message_counter % 10000 == 0:
-                            logging.error(f"No msgs received since: {time_of_first_encountered_empty_message}")
-                        if empty_message_counter == 100000:
+                            time_to_throw_an_exception = time_of_first_encountered_empty_message + timedelta(seconds=5)
+                        if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
                     
                     empty_message_counter = 0
+                    message_counter +=1
+                    if message_counter % 1000 == 0:
+                        now = datetime.today()
+                        interval = now - start_time
+                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
+                        start_time = now
+
                     logging.debug(f"Raw - {raw_message}")
                     logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
@@ -478,6 +491,12 @@ if __name__ == '__main__':
                                 logging.debug(result.get(timeout=1))
                             except Exception as error:
                                 logging.error(error)
+                        elif multithreading_is_enabled:
+                            try:
+                                result = thread_pool.apply_async(decode_multipart_message, [multipart_message])
+                                logging.debug(result.get(timeout=1))
+                            except Exception as error:
+                                logging.error(error)        
                         else:
                             decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
@@ -495,12 +514,18 @@ if __name__ == '__main__':
                             logging.debug(result.get(timeout=1))
                         except Exception as error:
                             logging.error(error)
+                    if multithreading_is_enabled:
+                        try:
+                            result = thread_pool.apply_async(decode_single_part_message, [encoded_message])
+                            logging.debug(result.get(timeout=1))
+                        except Exception as error:
+                            logging.error(error)
                     else: 
                         decode_single_part_message(encoded_message)
                     continue
                 except Exception as error:
                     logging.error(error)
-                    raise Exception
+                    raise error
         except Exception as error:
             logging.error(error)
-            raise Exception
+            raise error
