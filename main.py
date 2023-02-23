@@ -9,6 +9,7 @@ import os
 import logging
 from multiprocessing import Pool
 from datetime import datetime
+from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
 multiprocessing_is_enabled = False
@@ -459,7 +460,7 @@ if __name__ == '__main__':
                         empty_message_counter +=1
                         if empty_message_counter == 1:
                             time_of_first_encountered_empty_message = datetime.today();
-                            time_to_throw_an_exception = time_of_first_encountered_empty_message + datetime.timedelta(seconds=5)
+                            time_to_throw_an_exception = time_of_first_encountered_empty_message + timedelta(seconds=5)
                         if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
