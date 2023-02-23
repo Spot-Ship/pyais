@@ -351,17 +351,19 @@ def decode_single_part_message(message):
         except Exception as error:
             logging.error(f"Error occured decoding: {message} | {error}") 
 
-           
+
+def prep_multipart_message_for_decoding(part):
+    prepped_part = prep_message_for_decoding(part).replace("\r\n","")
+    if "AIVDM" in prepped_part:
+        return prepped_part
+    
+               
 def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
     """
     try:
-        multipart_message = []
-        for part in parts:
-            prepped_part = prep_message_for_decoding(part).replace("\r\n","")
-            if "AIVDM" in prepped_part:
-                multipart_message.append(prepped_part)
+        multipart_message = map(prep_multipart_message_for_decoding, parts)
         # logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
         # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
@@ -435,7 +437,7 @@ if __name__ == '__main__':
             first_part_of_multipart_message = ""
             multipart_message = []
             start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
-            message_counter, empty_message_counter = 0
+            message_counter, empty_message_counter = 0, 0
             
             # Loop through messages from Orbcomm Stream
             while True:
