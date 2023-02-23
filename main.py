@@ -353,17 +353,17 @@ def decode_single_part_message(message):
 
 
 def prep_multipart_message_for_decoding(part):
-    prepped_part = prep_message_for_decoding(part).replace("\r\n","")
-    if "AIVDM" in prepped_part:
-        return prepped_part
-    
+    return prep_message_for_decoding(part).replace("\r\n","")
+
+def is_valid_multipart_part(part):
+    return "AIVDM" in part
                
 def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
     """
     try:
-        multipart_message = map(prep_multipart_message_for_decoding, parts)
+        multipart_message = filter(is_valid_multipart_part ,map(prep_multipart_message_for_decoding, parts))
         # logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
         # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
