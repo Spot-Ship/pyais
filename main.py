@@ -285,7 +285,7 @@ def write_data_to_timestream(message):
         # logging.debug(f"RejectedRecords: {error}")
         return
     except Exception as error:
-        logging.error(f" Error occurred on {message} | {error}")
+        logging.error(f" Error occurred on {message} | Error Message | {error}")
 
 
 def prep_message_for_timestream(message):
@@ -333,9 +333,9 @@ def filter_messages(message):
 def prep_message_for_decoding(message):
     if '!' in message:
         message_parts = message.split("!")
-        return '!'.join(str(message_parts[1]))
+        return '!' + str(message_parts[1])
     else:
-        return '!'.join(message)
+        return '!' + message
 
 
 def decode_single_part_message(message):
@@ -349,7 +349,7 @@ def decode_single_part_message(message):
             # logging.debug(f"AIS Decoded First - {decoded_message}")
             filter_messages(decoded_message)
         except Exception as error:
-            logging.error(f"Error occured decoding: {message} | {error}") 
+            logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
 
 
 def prep_multipart_message_for_decoding(part):
@@ -374,7 +374,7 @@ def decode_multipart_message(parts):
         # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
         filter_messages(decodedAISMessage)
     except Exception as error:
-        logging.error(f"Error occured decoding: {parts} | {error}")
+        logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
 
 
 def checksum(nmea_string):
