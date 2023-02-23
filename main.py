@@ -363,7 +363,12 @@ def decode_multipart_message(parts):
     Decode multi-part AIS Messages
     """
     try:
-        multipart_message = filter(is_valid_multipart_part ,map(prep_multipart_message_for_decoding, parts))
+        # multipart_message = filter(is_valid_multipart_part ,map(prep_multipart_message_for_decoding, parts))
+        multipart_message = []
+        for part in parts:
+            prepped_part = prep_message_for_decoding(part).replace("\r\n","")
+            if "AIVDM" in prepped_part:
+                multipart_message.append(prepped_part)
         # logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
         # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
@@ -404,7 +409,7 @@ def get_orbcomm_socket():
     secure_client_socket.do_handshake()
     # logging.debug("Complete SSL handshake")
     # Get the certificate of the server and print.
-    server_certificate = secure_client_socket.getpeercert()
+    # server_certificate = secure_client_socket.getpeercert()
     # logging.debug("Certificate obtained from the server:")
     # logging.debug(server_certificate)
     # TODO move these to envVar
