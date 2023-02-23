@@ -449,7 +449,7 @@ if __name__ == '__main__':
             time_of_first_encountered_empty_message = start_time;
             time_to_throw_an_exception = start_time;
             process_pool = Pool()
-            thread_pool = ThreadPool(processes=100)
+            thread_pool = ThreadPool(processes=1000)
             
             # Loop through messages from Orbcomm Stream
             while True:
