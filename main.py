@@ -12,8 +12,8 @@ from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-multiprocessing_is_enabled = False
-multithreading_is_enabled = True
+multiprocessing_is_enabled = True
+multithreading_is_enabled = False
 
 # Context creation
 ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
