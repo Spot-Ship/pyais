@@ -308,6 +308,14 @@ def prep_message_for_timestream(message):
     """
     Filters & preps for Timestream.
     """
+    try:
+        del message['data']
+    except:
+        pass
+    try:
+        del message['spare_1']
+    except:
+        pass
     if message['msg_type'] in [1,2,3,27]:
         try:
             message['status'] = message['status'].decode("utf-8")
