@@ -9,6 +9,7 @@ from os import environ, path
 import logging
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import json
 
 # Context creation
 ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -21,8 +22,10 @@ logging.basicConfig(level=log_level, format=log_format)
 
 supported_msg_types = ['1','2','3','4','5','18','19','27']
 
+output = 'Kinesis'
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
+kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
 
 def get_eta(message):
     """
@@ -254,6 +257,19 @@ def get_measures(message):
     return []
 
 
+def write_data_to_kinesis(message):
+    """
+    Writes message to Kinesis stream
+    """
+    hashkey = str(message['msg_type'])
+    put_response = kinesis_client.put_record(
+        StreamName='Orbcomm-AIS',
+        Data=json.dumps(message),
+        PartitionKey=hashkey
+    )
+    return put_response
+
+
 def get_timestream_table(msg_type):
     """
     Get which table you are writing to from the msg_type
@@ -310,12 +326,15 @@ def prep_message_for_timestream(message):
         except:
             pass
     try:
-        timestream_response = write_data_to_timestream(message)
+        if 'Kinesis' in output:
+            response = write_data_to_kinesis(message)
+        else:  
+            response = write_data_to_timestream(message)
     except Exception as error:
-        logging.error(f"Kinesis - Error Msg: {error} - Processing: {str(message)}")
+        logging.error(f"Error Msg: {error} - Processing: {str(message)}")
         raise Exception
     else:
-        return timestream_response
+        return response
 
 
 def filter_messages(message):
@@ -363,12 +382,7 @@ def decode_multipart_message(parts):
     Decode multi-part AIS Messages
     """
     try:
-        # multipart_message = filter(is_valid_multipart_part ,map(prep_multipart_message_for_decoding, parts))
-        multipart_message = []
-        for part in parts:
-            prepped_part = prep_message_for_decoding(part).replace("\r\n","")
-            if "AIVDM" in prepped_part:
-                multipart_message.append(prepped_part)
+        multipart_message = filter(is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts))
         # logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
         # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
@@ -396,7 +410,6 @@ def get_orbcomm_socket():
     """
     Connect via SSL to Orbcomm websocket
     """
-    logging.info('Orbcomm Ingester Script Starting ...')
     # Load the CA certificates used for validating the peer's certificate.
     ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
     ssl_context.check_hostname = False
