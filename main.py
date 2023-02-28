@@ -333,6 +333,11 @@ def prep_message_for_timestream(message):
                 message['turn'] = 0.0
         except:
             pass
+    if message['msg_type'] in [5]:
+        try:
+            message['eta'] = get_eta(message)
+        except:
+            pass
     try:
         if 'Kinesis' in output:
             response = write_data_to_kinesis(message)
