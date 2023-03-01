@@ -187,7 +187,7 @@ def get_measures(message):
             },
             {
                 'Name': 'eta',
-                'Value': get_eta(message),
+                'Value': str(message['eta']),
                 'Type': 'TIMESTAMP'
             },
         ]
@@ -279,6 +279,16 @@ def get_timestream_table(msg_type):
     if msg_type == 5:
         return "Status"
     return ""
+
+def get_type(msg_type):
+    """
+    Get which type the message is deserialised as
+    """
+    if msg_type in [1,2,3,4,18,19,27]:
+        return "position"
+    if msg_type == 5:
+        return "status"
+    return ""
     
 
 def write_data_to_timestream(message):
@@ -308,6 +318,14 @@ def prep_message_for_timestream(message):
     """
     Filters & preps for Timestream.
     """
+    try:
+        message['time'] = round(time.time())
+    except:
+        pass
+    try:
+        message['@type'] = get_type(message['msg_type'])
+    except:
+        pass
     try:
         del message['data']
     except:
