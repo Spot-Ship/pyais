@@ -187,7 +187,7 @@ def get_measures(message):
             },
             {
                 'Name': 'eta',
-                'Value': str(message['eta']),
+                'Value': message['eta'],
                 'Type': 'TIMESTAMP'
             },
         ]
@@ -295,7 +295,7 @@ def write_data_to_timestream(message):
     """
     Inserts message to timestream
     """
-    # logging.debug(message)
+    logging.debug(message)
     records = [{
         'Time': str(message['time']),
         'TimeUnit': 'SECONDS',
@@ -303,11 +303,11 @@ def write_data_to_timestream(message):
         'MeasureValues': get_measures(message)
     }]
     try:
-        # logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
-        # logging.debug(records)
+        logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
+        logging.debug(records)
         return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(message['msg_type']), Records=records, CommonAttributes=get_attributes(message))
     except write_client.exceptions.RejectedRecordsException as error:
-        # logging.debug(f"RejectedRecords: {error}")
+        logging.debug(f"RejectedRecords: {error}")
         return
     except Exception as error:
         logging.error(f" Error occurred on {message} | Error Message | {error}")
@@ -325,44 +325,55 @@ def prep_message_for_timestream(message):
         message['@type'] = get_type(message['msg_type'])
     except:
         pass
-    try:
-        del message['data']
-    except:
-        pass
-    try:
-        del message['spare_1']
-    except:
-        pass
     if message['msg_type'] in [1,2,3,27]:
         try:
-            message['status'] = message['status'].decode("utf-8")
-            message['status'] = message['status'].split('.')[1].split(':')[0]
+            message['status'] = int(f"{message['status']}")
         except:
             pass
-    if message['msg_type'] in [1,2,3]:
-        try:
-            message['maneuver'] = message['maneuver'].decode("utf-8")
-            message['maneuver'] = message['maneuver'].split('.')[1].split(':')[0]
-        except:
-            pass
-        try:
-            if (message['turn']) == -0.0:
-                message['turn'] = 0.0
-        except:
-            pass
+        if message['msg_type'] in [1,2,3]:
+            try:
+                message['maneuver'] = int(f"{message['maneuver']}")
+            except:
+                pass
+            try:
+                if (message['turn']) == -0.0:
+                    message['turn'] = 0.0
+                if (f"{message['turn']}" == "TurnRate.NO_TI_DEFAULT"):
+                    message['turn'] = -128.0
+                elif (f"{message['turn']}" == "TurnRate.NO_TI_LEFT"):
+                    message['turn'] = -127.0
+                elif (f"{message['turn']}" == "TurnRate.NO_TI_RIGHT"):
+                    message['turn'] = 127.0
+                elif ("TurnRate.NO_TI_" in f"{message['turn']}"):
+                    message['turn'] = 0.0
+            except:
+                pass
     if message['msg_type'] in [5]:
         try:
             message['eta'] = get_eta(message)
         except:
             pass
+        try:
+            message['ship_type'] = int(f"{message['ship_type']}")
+        except:
+            pass
     try:
         if 'Kinesis' in output:
+            try:
+                if 'data' in message:
+                    del message['data']
+            except:
+                pass
+            try:
+                if 'spare_1' in message:
+                    del message['spare_1']
+            except:
+                pass
             response = write_data_to_kinesis(message)
         if 'Timestream' in output:
             response = write_data_to_timestream(message)
     except Exception as error:
         logging.error(f"Error Msg: {error} - Processing: {str(message)}")
-        raise Exception
     else:
         return response
 
@@ -395,7 +406,7 @@ def decode_single_part_message(message):
     if "AIVDM" in prepped_message:
         try:
             decoded_message = decode(prepped_message).asdict()
-            # logging.debug(f"AIS Decoded First - {decoded_message}")
+            logging.debug(f"AIS Decoded First - {decoded_message}")
             filter_messages(decoded_message)
         except Exception as error:
             logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
@@ -413,9 +424,9 @@ def decode_multipart_message(parts):
     """
     try:
         multipart_message = filter(is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts))
-        # logging.debug(f"Raw Multipart - {multipart_message}")
+        logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
-        # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
+        logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
         filter_messages(decodedAISMessage)
     except Exception as error:
         logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
@@ -447,10 +458,10 @@ def get_orbcomm_socket():
     client_socket = socket.create_connection(("globalais2.orbcomm.net", 9054))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
-    # logging.debug('Established connection')
+    logging.debug('Established connection')
     # Explicit handshake.
     secure_client_socket.do_handshake()
-    # logging.debug("Complete SSL handshake")
+    logging.debug("Complete SSL handshake")
     # Get the certificate of the server and print.
     # server_certificate = secure_client_socket.getpeercert()
     # logging.debug("Certificate obtained from the server:")
@@ -509,17 +520,17 @@ if __name__ == '__main__':
                     if message_counter % 1000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
+                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds | Rate: {1000/interval.total_seconds()} message per second")
                         start_time = now
 
-                    # logging.debug(f"Raw - {raw_message}")
-                    # logging.debug(f"Decoded utf-8 - {encoded_message}")
+                    logging.debug(f"Raw - {raw_message}")
+                    logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
                     # Check that we are dealing with the second part of a multipart msg.
                     # N.B. This solution only deals with 2 part msgs.
                     if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
-                        # logging.debug(f"First part  - {first_part_of_multipart_message}")
-                        # logging.debug(f"Second part - {encoded_message}")
+                        logging.debug(f"First part  - {first_part_of_multipart_message}")
+                        logging.debug(f"Second part - {encoded_message}")
                         multipart_message = [first_part_of_multipart_message, encoded_message]
                         decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
