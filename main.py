@@ -349,11 +349,13 @@ def prep_message_for_timestream(message):
         logging.debug(message)
         if 'Kinesis' in output:
             try:
-                del message['data']
+                if 'data' in message:
+                    del message['data']
             except:
                 pass
             try:
-                del message['spare_1']
+                if 'spare_1' in message:
+                    del message['spare_1']
             except:
                 pass
             response = write_data_to_kinesis(message)
