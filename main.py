@@ -336,6 +336,8 @@ def prep_message_for_timestream(message):
             except:
                 pass
             try:
+                if (message['turn']) == -0.0:
+                    message['turn'] = 0.0
                 if (f"{message['turn']}" == "TurnRate.NO_TI_DEFAULT"):
                     message['turn'] = -128.0
                 elif (f"{message['turn']}" == "TurnRate.NO_TI_LEFT"):
@@ -343,11 +345,6 @@ def prep_message_for_timestream(message):
                 elif (f"{message['turn']}" == "TurnRate.NO_TI_RIGHT"):
                     message['turn'] = 127.0
                 elif ("TurnRate.NO_TI_" in f"{message['turn']}"):
-                    message['turn'] = 0.0
-            except:
-                pass
-            try:    
-                if (message['turn']) == -0.0:
                     message['turn'] = 0.0
             except:
                 pass
