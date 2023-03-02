@@ -295,7 +295,7 @@ def write_data_to_timestream(message):
     """
     Inserts message to timestream
     """
-    # logging.debug(message)
+    logging.debug(message)
     records = [{
         'Time': str(message['time']),
         'TimeUnit': 'SECONDS',
@@ -303,11 +303,11 @@ def write_data_to_timestream(message):
         'MeasureValues': get_measures(message)
     }]
     try:
-        # logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
-        # logging.debug(records)
+        logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
+        logging.debug(records)
         return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(message['msg_type']), Records=records, CommonAttributes=get_attributes(message))
     except write_client.exceptions.RejectedRecordsException as error:
-        # logging.debug(f"RejectedRecords: {error}")
+        logging.debug(f"RejectedRecords: {error}")
         return
     except Exception as error:
         logging.error(f" Error occurred on {message} | Error Message | {error}")
@@ -458,10 +458,10 @@ def get_orbcomm_socket():
     client_socket = socket.create_connection(("globalais2.orbcomm.net", 9054))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
-    # logging.debug('Established connection')
+    logging.debug('Established connection')
     # Explicit handshake.
     secure_client_socket.do_handshake()
-    # logging.debug("Complete SSL handshake")
+    logging.debug("Complete SSL handshake")
     # Get the certificate of the server and print.
     # server_certificate = secure_client_socket.getpeercert()
     # logging.debug("Certificate obtained from the server:")
@@ -523,14 +523,14 @@ if __name__ == '__main__':
                         logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
                         start_time = now
 
-                    # logging.debug(f"Raw - {raw_message}")
-                    # logging.debug(f"Decoded utf-8 - {encoded_message}")
+                    logging.debug(f"Raw - {raw_message}")
+                    logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
                     # Check that we are dealing with the second part of a multipart msg.
                     # N.B. This solution only deals with 2 part msgs.
                     if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
-                        # logging.debug(f"First part  - {first_part_of_multipart_message}")
-                        # logging.debug(f"Second part - {encoded_message}")
+                        logging.debug(f"First part  - {first_part_of_multipart_message}")
+                        logging.debug(f"Second part - {encoded_message}")
                         multipart_message = [first_part_of_multipart_message, encoded_message]
                         decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
