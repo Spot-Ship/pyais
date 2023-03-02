@@ -327,17 +327,24 @@ def prep_message_for_timestream(message):
         pass
     if message['msg_type'] in [1,2,3,27]:
         try:
-            message['status'] = message['status'].decode("utf-8").split('.')[1].split(':')[0]
+            logging.info(f"Status before {message['status']}")
+            message['status'] = message['status'].decode("utf-8").split(':')[1]
+            logging.info(f"Status after {message['status']}")
         except:
             pass
         if message['msg_type'] in [1,2,3]:
             try:
-                message['maneuver'] = message['maneuver'].decode("utf-8").split('.')[1].split(':')[0]
+                logging.info(f"Maneuver before {message['maneuver']}")
+                message['maneuver'] = message['maneuver'].decode("utf-8").split(':')[1]
+                logging.info(f"Maneuver after {message['maneuver']}")
             except:
                 pass
             try:
+                logging.info(f"Turn before {message['turn']}")
+                message['turn'] = float(message['turn'].decode("utf-8").split(':')[1])
                 if (message['turn']) == -0.0:
                     message['turn'] = 0.0
+                logging.info(f"Turn after {message['turn']}")
             except:
                 pass
     if message['msg_type'] in [5]:
@@ -346,7 +353,7 @@ def prep_message_for_timestream(message):
         except:
             pass
     try:
-        logging.debug(message)
+        logging.info(message)
         if 'Kinesis' in output:
             try:
                 if 'data' in message:
