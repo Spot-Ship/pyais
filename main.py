@@ -406,7 +406,7 @@ def decode_single_part_message(message):
     if "AIVDM" in prepped_message:
         try:
             decoded_message = decode(prepped_message).asdict()
-            # logging.debug(f"AIS Decoded First - {decoded_message}")
+            logging.debug(f"AIS Decoded First - {decoded_message}")
             filter_messages(decoded_message)
         except Exception as error:
             logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
@@ -424,9 +424,9 @@ def decode_multipart_message(parts):
     """
     try:
         multipart_message = filter(is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts))
-        # logging.debug(f"Raw Multipart - {multipart_message}")
+        logging.debug(f"Raw Multipart - {multipart_message}")
         decodedAISMessage = decode(*multipart_message).asdict()
-        # logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
+        logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
         filter_messages(decodedAISMessage)
     except Exception as error:
         logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
@@ -520,7 +520,7 @@ if __name__ == '__main__':
                     if message_counter % 1000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds")
+                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds | Rate: {1000/interval.total_seconds()} message per second")
                         start_time = now
 
                     logging.debug(f"Raw - {raw_message}")
