@@ -296,11 +296,10 @@ def write_data_to_timestream(message):
     Inserts message to timestream
     """
     # logging.debug(message)
-    now = round(time.time())
     records = [{
-        'Time': str(now),
+        'Time': str(message['time']),
         'TimeUnit': 'SECONDS',
-        'Version': now,
+        'Version': message['time'],
         'MeasureValues': get_measures(message)
     }]
     try:
