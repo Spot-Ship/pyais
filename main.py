@@ -187,7 +187,7 @@ def get_measures(message):
             },
             {
                 'Name': 'eta',
-                'Value': str(message['eta']),
+                'Value': message['eta'],
                 'Type': 'TIMESTAMP'
             },
         ]
@@ -325,44 +325,42 @@ def prep_message_for_timestream(message):
         message['@type'] = get_type(message['msg_type'])
     except:
         pass
-    try:
-        del message['data']
-    except:
-        pass
-    try:
-        del message['spare_1']
-    except:
-        pass
     if message['msg_type'] in [1,2,3,27]:
         try:
-            message['status'] = message['status'].decode("utf-8")
-            message['status'] = message['status'].split('.')[1].split(':')[0]
+            message['status'] = message['status'].decode("utf-8").split('.')[1].split(':')[0]
         except:
             pass
-    if message['msg_type'] in [1,2,3]:
-        try:
-            message['maneuver'] = message['maneuver'].decode("utf-8")
-            message['maneuver'] = message['maneuver'].split('.')[1].split(':')[0]
-        except:
-            pass
-        try:
-            if (message['turn']) == -0.0:
-                message['turn'] = 0.0
-        except:
-            pass
+        if message['msg_type'] in [1,2,3]:
+            try:
+                message['maneuver'] = message['maneuver'].decode("utf-8").split('.')[1].split(':')[0]
+            except:
+                pass
+            try:
+                if (message['turn']) == -0.0:
+                    message['turn'] = 0.0
+            except:
+                pass
     if message['msg_type'] in [5]:
         try:
             message['eta'] = get_eta(message)
         except:
             pass
     try:
+        logging.debug(message)
         if 'Kinesis' in output:
+            try:
+                del message['data']
+            except:
+                pass
+            try:
+                del message['spare_1']
+            except:
+                pass
             response = write_data_to_kinesis(message)
         if 'Timestream' in output:
             response = write_data_to_timestream(message)
     except Exception as error:
         logging.error(f"Error Msg: {error} - Processing: {str(message)}")
-        raise Exception
     else:
         return response
 
