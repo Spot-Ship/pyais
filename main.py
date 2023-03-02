@@ -22,7 +22,7 @@ logging.basicConfig(level=log_level, format=log_format)
 
 supported_msg_types = ['1','2','3','4','5','18','19','27']
 
-output = 'Kinesis'
+output = 'Kinesis&Timestream'
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
@@ -359,7 +359,7 @@ def prep_message_for_timestream(message):
     try:
         if 'Kinesis' in output:
             response = write_data_to_kinesis(message)
-        else:  
+        if 'Timestream' in output:
             response = write_data_to_timestream(message)
     except Exception as error:
         logging.error(f"Error Msg: {error} - Processing: {str(message)}")
