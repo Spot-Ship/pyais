@@ -337,10 +337,13 @@ def prep_message_for_timestream(message):
                 pass
             try:
                 logging.info(f"Turn before {message['turn']}")
-                message['turn'] = float(message['turn'].split(':')[1].replace('>',''))
+                message['turn'] = message['turn'].getValue()
+                logging.info(f"Turn after {message['turn']}")
+            except:
+                pass
+            try:    
                 if (message['turn']) == -0.0:
                     message['turn'] = 0.0
-                logging.info(f"Turn after {message['turn']}")
             except:
                 pass
     if message['msg_type'] in [5]:
