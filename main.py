@@ -327,16 +327,12 @@ def prep_message_for_timestream(message):
         pass
     if message['msg_type'] in [1,2,3,27]:
         try:
-            logging.info(f"Status before {message['status']}")
             message['status'] = int(f"{message['status']}")
-            logging.info(f"Status after {message['status']}")
         except:
             pass
         if message['msg_type'] in [1,2,3]:
             try:
-                logging.info(f"Maneuver before {message['maneuver']}")
                 message['maneuver'] = int(f"{message['maneuver']}")
-                logging.info(f"Maneuver after {message['maneuver']}")
             except:
                 pass
             try:
