@@ -338,7 +338,7 @@ def prep_message_for_timestream(message):
             try:
                 logging.info(f"Turn before {message['turn']}")
                 if (f"{message['turn']}" == "TurnRate.NO_TI_DEFAULT"):
-                    message['turn'] = 0.0
+                    message['turn'] = -128.0
                 logging.info(f"Turn after {message['turn']}")
             except:
                 pass
