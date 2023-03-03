@@ -327,10 +327,10 @@ def write_data_to_kinesis(message):
     """
     Writes message to Kinesis stream
     """
-    hashkey = str(message['mmsi'])
+    hashkey = f"${message['mmsi']}|${message['msg_type']}|${message['time']}"
     put_response = kinesis_client.put_record(
         StreamName='Orbcomm-AIS',
-        Data=bytes(json.dumps(trimMessageForKinesis(message)), 'utf-8'),
+        Data=json.dumps(trimMessageForKinesis(message)),
         PartitionKey=hashkey
     )
     return put_response
