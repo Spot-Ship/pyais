@@ -331,6 +331,7 @@ def write_data_to_kinesis(message):
     """
     Writes message to Kinesis stream
     """
+    logging.info(f"Before|${json.dumps(message)}")
     data = json.dumps(trimMessageForKinesis(message))
     logging.info(data)
     hashkey = f"${message['mmsi']}${message['msg_type']}${message['time']}"
