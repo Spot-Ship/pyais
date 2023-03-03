@@ -257,14 +257,80 @@ def get_measures(message):
     return []
 
 
+def trimMessageForKinesis(message):
+    if message['msg_type'] in [1,2,3]:
+        return {
+            '@type': 'position',
+            'time': message['time'],
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'turn': message['turn'],
+            'status': message['status'],
+            'maneuver': message['maneuver'],
+            'heading': message['heading'],
+        }
+    if message['msg_type'] == 4:
+        return {
+            '@type': 'position',
+            'time': message['time'],
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+        }
+    if message['msg_type'] == 5:
+        return {
+            '@type': 'position',
+            'time': message['time'],
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'to_bow': message['to_bow'],
+            'to_stern': message['to_stern'],
+            'to_port': message['to_port'],
+            'to_starboard': message['to_starboard'],
+            'draught': message['draught'],
+            'eta': message['eta'],
+            'destination': message['destination'],
+        }
+    if message['msg_type'] in [18,19]:
+        return {
+            '@type': 'position',
+            'time': message['time'],
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'heading': message['heading'],
+        }
+    if message['msg_type'] == 27:
+        return {
+            '@type': 'position',
+            'time': message['time'],
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'status': message['status'],
+        }
+    return {}
+    
+
 def write_data_to_kinesis(message):
     """
     Writes message to Kinesis stream
     """
-    hashkey = str(message['msg_type'])
+    hashkey = str(message['mmsi'])
     put_response = kinesis_client.put_record(
         StreamName='Orbcomm-AIS',
-        Data=bytes(json.dumps(message), 'utf-8'),
+        Data=bytes(json.dumps(trimMessageForKinesis(message)), 'utf-8'),
         PartitionKey=hashkey
     )
     return put_response
