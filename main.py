@@ -259,9 +259,7 @@ def get_measures(message):
 
 def trimMessageForKinesis(message):
     if message['msg_type'] in [1,2,3]:
-        return {
-            '@type': 'position',
-            'time': message['time'],
+        return { 
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'lon': message['lon'],
@@ -272,20 +270,20 @@ def trimMessageForKinesis(message):
             'status': message['status'],
             'maneuver': message['maneuver'],
             'heading': message['heading'],
+            'time': message['time'],
+            '@type': 'position',
         }
     if message['msg_type'] == 4:
         return {
-            '@type': 'position',
-            'time': message['time'],
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'lon': message['lon'],
             'lat': message['lat'],
+            'time': message['time'],
+            '@type': 'position',
         }
     if message['msg_type'] == 5:
         return {
-            '@type': 'status',
-            'time': message['time'],
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'imo': message['imo'],
@@ -299,11 +297,11 @@ def trimMessageForKinesis(message):
             'draught': message['draught'],
             'eta': message['eta'],
             'destination': message['destination'],
+            'time': message['time'],
+            '@type': 'status',
         }
     if message['msg_type'] in [18,19]:
         return {
-            '@type': 'position',
-            'time': message['time'],
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'lon': message['lon'],
@@ -311,11 +309,11 @@ def trimMessageForKinesis(message):
             'speed': message['speed'],
             'course': message['course'],
             'heading': message['heading'],
+            'time': message['time'],
+            '@type': 'position',
         }
     if message['msg_type'] == 27:
         return {
-            '@type': 'position',
-            'time': message['time'],
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'lon': message['lon'],
@@ -323,6 +321,8 @@ def trimMessageForKinesis(message):
             'speed': message['speed'],
             'course': message['course'],
             'status': message['status'],
+            'time': message['time'],
+             '@type': 'position',
         }
     return {}
     
@@ -331,7 +331,7 @@ def write_data_to_kinesis(message):
     """
     Writes message to Kinesis stream
     """
-    logging.info(f"Before|${json.dumps(message)}")
+    logging.info(f"Before|{json.dumps(message)}")
     data = json.dumps(trimMessageForKinesis(message))
     logging.info(data)
     hashkey = f"${message['mmsi']}${message['msg_type']}${message['time']}"
