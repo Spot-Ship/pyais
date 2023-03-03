@@ -289,7 +289,7 @@ def trimMessageForKinesis(message):
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'imo': message['imo'],
-            'ship_type': message['shipe_type'],
+            'ship_type': message['ship_type'],
             'shipname': message['shipname'],
             'callsign': message['callsign'],
             'to_bow': message['to_bow'],
