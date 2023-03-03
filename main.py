@@ -264,7 +264,7 @@ def write_data_to_kinesis(message):
     hashkey = str(message['msg_type'])
     put_response = kinesis_client.put_record(
         StreamName='Orbcomm-AIS',
-        Data=json.dumps(message),
+        Data=bytes(json.dumps(message), 'utf-8'),
         PartitionKey=hashkey
     )
     return put_response
