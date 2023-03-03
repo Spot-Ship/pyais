@@ -284,7 +284,7 @@ def trimMessageForKinesis(message):
         }
     if message['msg_type'] == 5:
         return {
-            '@type': 'position',
+            '@type': 'status',
             'time': message['time'],
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
