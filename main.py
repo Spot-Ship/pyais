@@ -116,6 +116,7 @@ def write_data_to_kinesis(messages):
     """
     Writes message to Kinesis stream
     """
+    logging.info(messages)
     put_response = kinesis_client.put_records(
         StreamName='Orbcomm-AIS',
         Records=messages,
@@ -190,7 +191,7 @@ def filter_messages(message):
     """
     Checks decoded message is of a type we care about & sends it to process it.
     """
-    if message is None or str(message['msg_type']) in supported_msg_types:
+    if message is None or str(message['msg_type']) not in supported_msg_types:
         return None
     try:
         return prep_message_for_kinesis(message)
