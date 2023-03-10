@@ -112,17 +112,16 @@ def trimMessageForKinesis(message):
     return {}
     
 
-def write_data_to_kinesis(message):
+def write_data_to_kinesis(messages):
     """
     Writes message to Kinesis stream
     """
-    data = json.dumps(trimMessageForKinesis(message))
-    hashkey = f"${message['mmsi']}${message['msg_type']}${message['time']}"
-    put_response = kinesis_client.put_record(
+    put_response = kinesis_client.put_records(
         StreamName='Orbcomm-AIS',
-        Data=data,
-        PartitionKey=hashkey
+        Records=messages,
     )
+    if put_response['FailedRecordCount'] > 0:
+        logging.error(f"Failed to process {put_response['FailedRecordCount']}")
     return put_response
 
 
@@ -181,34 +180,24 @@ def prep_message_for_kinesis(message):
             message['ship_type'] = int(f"{message['ship_type']}")
         except:
             pass
-    try:
-        try:
-            if 'data' in message:
-                del message['data']
-        except:
-            pass
-        try:
-            if 'spare_1' in message:
-                del message['spare_1']
-        except:
-            pass
-        response = write_data_to_kinesis(message)
-    except Exception as error:
-        logging.error(f"Error Msg: {error} - Processing: {str(message)}")
-    else:
-        return response
+    return {
+        "Data" : json.dumps(trimMessageForKinesis(message)),
+        "PartitionKey": f"${message['mmsi']}${message['msg_type']}${message['time']}",
+    }
 
 
 def filter_messages(message):
     """
     Checks decoded message is of a type we care about & sends it to process it.
     """
-    if message is not None and str(message['msg_type']) in supported_msg_types:
-        try:
-            prep_message_for_kinesis(message)
-        except Exception as error:
-            logging.error(error)
-            raise Exception
+    if message is None or str(message['msg_type']) in supported_msg_types:
+        return None
+    try:
+        return prep_message_for_kinesis(message)
+    except Exception as error:
+        logging.error(error)
+        raise Exception 
+    
 
 
 def prep_message_for_decoding(message):
@@ -228,7 +217,7 @@ def decode_single_part_message(message):
         try:
             decoded_message = decode(prepped_message).asdict()
             logging.debug(f"AIS Decoded First - {decoded_message}")
-            filter_messages(decoded_message)
+            return decoded_message
         except Exception as error:
             logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
 
@@ -246,9 +235,9 @@ def decode_multipart_message(parts):
     try:
         multipart_message = filter(is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts))
         logging.debug(f"Raw Multipart - {multipart_message}")
-        decodedAISMessage = decode(*multipart_message).asdict()
-        logging.debug(f"AIS Decoded Multipart - {decodedAISMessage}")
-        filter_messages(decodedAISMessage)
+        decoded_ais_message = decode(*multipart_message).asdict()
+        logging.debug(f"AIS Decoded Multipart - {decoded_ais_message}")
+        return decoded_ais_message
     except Exception as error:
         logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
 
@@ -313,11 +302,9 @@ if __name__ == '__main__':
         logging.info('Orbcomm Ingester Script Starting ...')
         socket = get_orbcomm_socket() 
         try:
-            first_part_of_multipart_message = ""
-            multipart_message = []
+            first_part_of_multipart_message, multipart_message = "", []
             start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
-            message_counter, empty_message_counter = 0, 0
-            
+            message_counter, empty_message_counter, messages = 0, 0, []
             # Loop through messages from Orbcomm Stream
             while True:
                 try:
@@ -332,6 +319,10 @@ if __name__ == '__main__':
                             time_of_first_encountered_empty_message = datetime.today();
                             time_to_throw_an_exception = time_of_first_encountered_empty_message + timedelta(seconds=5)
                         if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
+                            # Clean up backlog before erroring out
+                            if len(messages) > 0:
+                                write_data_to_kinesis(messages)
+                                messages = []
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
                     
@@ -346,23 +337,31 @@ if __name__ == '__main__':
                     logging.debug(f"Raw - {raw_message}")
                     logging.debug(f"Decoded utf-8 - {encoded_message}")
                     
-                    # Check that we are dealing with the second part of a multipart msg.
-                    # N.B. This solution only deals with 2 part msgs.
-                    if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
-                        logging.debug(f"First part  - {first_part_of_multipart_message}")
-                        logging.debug(f"Second part - {encoded_message}")
-                        multipart_message = [first_part_of_multipart_message, encoded_message]
-                        decode_multipart_message(multipart_message)
-                        first_part_of_multipart_message = ""
-                        continue
-                    
                     # Check for multipart msgs
                     # N.B. This solution only deals with 2 part msgs.
                     if 'AIVDM,2,1' in encoded_message:
                         first_part_of_multipart_message = encoded_message
                         continue
                     
-                    decode_single_part_message(encoded_message)
+                    # Check that we are dealing with the second part of a multipart msg.
+                    # N.B. This solution only deals with 2 part msgs.
+                    if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
+                        logging.debug(f"First part  - {first_part_of_multipart_message}")
+                        logging.debug(f"Second part - {encoded_message}")
+                        multipart_message = [first_part_of_multipart_message, encoded_message]
+                        decoded = decode_multipart_message(multipart_message)
+                        first_part_of_multipart_message = ""
+                    else:
+                        decoded = decode_single_part_message(encoded_message)
+                    
+                    prepped = filter_messages(decoded)
+                    if prepped is not None:
+                        messages.append(prepped)
+                    
+                    #N.B. 500 is the max supported
+                    if len(messages) >= 400:
+                        write_data_to_kinesis(messages)
+                        messages = []
                     continue
                 except Exception as error:
                     logging.error(error)
