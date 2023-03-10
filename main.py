@@ -22,7 +22,6 @@ logging.basicConfig(level=log_level, format=log_format)
 
 supported_msg_types = ['1','2','3','4','5','18','19','27']
 
-output = 'Kinesis'
 session = boto3.Session()
 kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
 
