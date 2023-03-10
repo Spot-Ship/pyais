@@ -22,7 +22,7 @@ logging.basicConfig(level=log_level, format=log_format)
 
 supported_msg_types = ['1','2','3','4','5','18','19','27']
 
-output = 'Kinesis&Timestream'
+output = 'Kinesis'
 session = boto3.Session()
 write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
@@ -257,14 +257,85 @@ def get_measures(message):
     return []
 
 
+def trimMessageForKinesis(message):
+    if message['msg_type'] in [1,2,3]:
+        return { 
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'turn': message['turn'],
+            'status': message['status'],
+            'maneuver': message['maneuver'],
+            'heading': message['heading'],
+            'time': message['time'],
+            '@type': 'position',
+        }
+    if message['msg_type'] == 4:
+        return {
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'time': message['time'],
+            '@type': 'position',
+        }
+    if message['msg_type'] == 5:
+        return {
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'imo': message['imo'],
+            'ship_type': message['ship_type'],
+            'shipname': message['shipname'],
+            'callsign': message['callsign'],
+            'to_bow': message['to_bow'],
+            'to_stern': message['to_stern'],
+            'to_port': message['to_port'],
+            'to_starboard': message['to_starboard'],
+            'draught': message['draught'],
+            'eta': message['eta'],
+            'destination': message['destination'],
+            'time': message['time'],
+            '@type': 'status',
+        }
+    if message['msg_type'] in [18,19]:
+        return {
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'heading': message['heading'],
+            'time': message['time'],
+            '@type': 'position',
+        }
+    if message['msg_type'] == 27:
+        return {
+            'msg_type': message['msg_type'],
+            'mmsi': message['mmsi'],
+            'lon': message['lon'],
+            'lat': message['lat'],
+            'speed': message['speed'],
+            'course': message['course'],
+            'status': message['status'],
+            'time': message['time'],
+            '@type': 'position',
+        }
+    return {}
+    
+
 def write_data_to_kinesis(message):
     """
     Writes message to Kinesis stream
     """
-    hashkey = str(message['msg_type'])
+    data = json.dumps(trimMessageForKinesis(message))
+    hashkey = f"${message['mmsi']}${message['msg_type']}${message['time']}"
     put_response = kinesis_client.put_record(
         StreamName='Orbcomm-AIS',
-        Data=json.dumps(message),
+        Data=data,
         PartitionKey=hashkey
     )
     return put_response
