@@ -3,13 +3,17 @@
 ```mermaid
 graph LR
 O[ORBCOMM S-AIS]
-I(Ingester)
+I(OrbcommIngester)
+K>Kinesis]
+A(AISKinesisIngester)
 T((Timestream))
 L>Updater Lambda]
 S((Spotship Database))
 
 O --- |SSL Websocket| I
-I --> T
+I --- K
+K --> A
+A --> T
 T --- |Invoked every minute for last 70s of msgs| L
 L --> S
 ```
@@ -18,7 +22,9 @@ L --> S
 
 🚨 **We only pay for 1 Orbcomm Stream reader, so if you run locally it cuts off our main reader in AWS.** 🚨
 
-If your local stream is getting no messages then it is likely another service is connected to the stream.
+Take a copy of the `.env.example` file and call it `.env` then fill out the environment varibale values with your AWS credentials etc.
+
+_N.B. If your local stream is getting no messages then it is likely another service is connected to the stream._
 
 ### Via Docker [RECOMMENDED]
 
@@ -26,7 +32,7 @@ If your local stream is getting no messages then it is likely another service is
 
 ```sh
 docker build -t spotship/orbcomm-ingester:latest .
-docker run spotship/orbcomm-ingester:latest
+docker run --env-file .env spotship/orbcomm-ingester:latest
 ```
 
 ### Via Pipenv
