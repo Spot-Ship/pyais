@@ -22,9 +22,7 @@ logging.basicConfig(level=log_level, format=log_format)
 
 supported_msg_types = ['1','2','3','4','5','18','19','27']
 
-output = 'Kinesis'
 session = boto3.Session()
-write_client = session.client('timestream-write', config=Config(region_name="eu-west-1",read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
 kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
 
 def get_eta(message):
@@ -43,219 +41,6 @@ def get_eta(message):
     eta = datetime.today() + relativedelta(months=message['month'], days=message['day'], hours=message['hour'], minutes=message['minute'])
     return str(int(eta.timestamp()))
             
-
-def get_attributes(message):
-    """
-    Returns attribute by msg_type
-    """
-    if message['msg_type'] in [1,2,3,4,18,19,27]:
-        return {
-            'Dimensions': [
-                {
-                    'Name': 'mmmsi',
-                    'Value': str(message['mmsi']),
-                    'DimensionValueType': 'VARCHAR'
-                }
-            ],
-            'MeasureName': 'position',
-            'MeasureValueType': 'MULTI'
-        }
-    if message['msg_type'] == 5:
-        dimensions = [
-            {
-                'Name': 'mmmsi',
-                'Value': str(message['mmsi']),
-                'DimensionValueType': 'VARCHAR'
-            },
-            {
-                'Name': 'imo',
-                'Value': str(message['imo']),
-                'DimensionValueType': 'VARCHAR'
-            },
-            {
-                'Name': 'ship_type',
-                'Value': str(message['ship_type']),
-                'DimensionValueType': 'VARCHAR'
-            },
-        ]
-        if message['shipname'] != "":
-            dimensions.insert(2, {
-                'Name': 'name',
-                'Value': str(message['shipname']),
-                'DimensionValueType': 'VARCHAR'
-            })
-        if message['callsign'] != "":
-            dimensions.insert(3, {
-                'Name': 'callsign',
-                'Value': str(message['callsign']),
-                'DimensionValueType': 'VARCHAR'
-            })
-        return {
-            'Dimensions': dimensions,
-            'MeasureName': 'status',
-            'MeasureValueType': 'MULTI'
-        }
-    return {}
-
-
-def get_measures(message): 
-    """
-    Returns measure by msg_type
-    """
-    if message['msg_type'] in [1,2,3]:
-        return [
-            {
-                'Name': 'longitude',
-                'Value': str(message['lon']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'latitude',
-                'Value': str(message['lat']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'speed',
-                'Value': str(message['speed']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'course',
-                'Value': str(message['course']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'turn',
-                'Value': str(message['turn']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'status',
-                'Value': str(message['status']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'maneuver',
-                'Value': str(message['maneuver']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'heading',
-                'Value': str(message['heading']),
-                'Type': 'BIGINT'
-            },
-        ]
-    if message['msg_type'] == 4:
-        return [
-            {
-                'Name': 'longitude',
-                'Value': str(message['lon']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'latitude',
-                'Value': str(message['lat']),
-                'Type': 'DOUBLE'
-            },
-        ]
-    if message['msg_type'] == 5:
-        measures = [
-            {
-                'Name': 'to_bow',
-                'Value': str(message['to_bow']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'to_stern',
-                'Value': str(message['to_stern']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'to_port',
-                'Value': str(message['to_port']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'to_starboard',
-                'Value': str(message['to_starboard']),
-                'Type': 'BIGINT'
-            },
-            {
-                'Name': 'draught',
-                'Value': str(message['draught']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'eta',
-                'Value': message['eta'],
-                'Type': 'TIMESTAMP'
-            },
-        ]
-        if message['destination'] != "":
-            measures.insert(0, {
-                'Name': 'destination',
-                'Value': str(message['destination']),
-                'Type': 'VARCHAR'
-            })
-        return measures
-    if message['msg_type'] in [18,19]:
-        return [
-            {
-                'Name': 'longitude',
-                'Value': str(message['lon']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'latitude',
-                'Value': str(message['lat']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'speed',
-                'Value': str(message['speed']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'course',
-                'Value': str(message['course']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'heading',
-                'Value': str(message['heading']),
-                'Type': 'BIGINT'
-            },
-        ]
-    if message['msg_type'] == 27:
-        return [
-            {
-                'Name': 'longitude',
-                'Value': str(message['lon']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'latitude',
-                'Value': str(message['lat']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'speed',
-                'Value': str(message['speed']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'course',
-                'Value': str(message['course']),
-                'Type': 'DOUBLE'
-            },
-            {
-                'Name': 'status',
-                'Value': str(message['status']),
-                'Type': 'BIGINT'
-            },
-        ]
-    return []
-
 
 def trimMessageForKinesis(message):
     if message['msg_type'] in [1,2,3]:
@@ -341,16 +126,6 @@ def write_data_to_kinesis(message):
     return put_response
 
 
-def get_timestream_table(msg_type):
-    """
-    Get which table you are writing to from the msg_type
-    """
-    if msg_type in [1,2,3,4,18,19,27]:
-        return "Positions"
-    if msg_type == 5:
-        return "Status"
-    return ""
-
 def get_type(msg_type):
     """
     Get which type the message is deserialised as
@@ -360,33 +135,11 @@ def get_type(msg_type):
     if msg_type == 5:
         return "status"
     return ""
-    
-
-def write_data_to_timestream(message):
-    """
-    Inserts message to timestream
-    """
-    logging.debug(message)
-    records = [{
-        'Time': str(message['time']),
-        'TimeUnit': 'SECONDS',
-        'Version': message['time'],
-        'MeasureValues': get_measures(message)
-    }]
-    try:
-        logging.debug(f"Writing to {get_timestream_table(message['msg_type'])}")
-        logging.debug(records)
-        return write_client.write_records(DatabaseName='AIS', TableName=get_timestream_table(message['msg_type']), Records=records, CommonAttributes=get_attributes(message))
-    except write_client.exceptions.RejectedRecordsException as error:
-        logging.debug(f"RejectedRecords: {error}")
-        return
-    except Exception as error:
-        logging.error(f" Error occurred on {message} | Error Message | {error}")
 
 
-def prep_message_for_timestream(message):
+def prep_message_for_kinesis(message):
     """
-    Filters & preps for Timestream.
+    Filters & preps for Kinesis.
     """
     try:
         message['time'] = round(time.time())
@@ -429,20 +182,17 @@ def prep_message_for_timestream(message):
         except:
             pass
     try:
-        if 'Kinesis' in output:
-            try:
-                if 'data' in message:
-                    del message['data']
-            except:
-                pass
-            try:
-                if 'spare_1' in message:
-                    del message['spare_1']
-            except:
-                pass
-            response = write_data_to_kinesis(message)
-        if 'Timestream' in output:
-            response = write_data_to_timestream(message)
+        try:
+            if 'data' in message:
+                del message['data']
+        except:
+            pass
+        try:
+            if 'spare_1' in message:
+                del message['spare_1']
+        except:
+            pass
+        response = write_data_to_kinesis(message)
     except Exception as error:
         logging.error(f"Error Msg: {error} - Processing: {str(message)}")
     else:
@@ -455,7 +205,7 @@ def filter_messages(message):
     """
     if message is not None and str(message['msg_type']) in supported_msg_types:
         try:
-            prep_message_for_timestream(message)
+            prep_message_for_kinesis(message)
         except Exception as error:
             logging.error(error)
             raise Exception
@@ -552,13 +302,12 @@ def get_orbcomm_socket():
     return secure_client_socket
 
 
-
 if __name__ == '__main__':
     """
     Main Thread:
         Connects to Orbcomm websocket, 
         Decodes AIS messages,
-        Sends relevant data to Timestream Database.
+        Sends relevant data to Kinesis.
     """
     while True:
         logging.info('Orbcomm Ingester Script Starting ...')
@@ -588,10 +337,10 @@ if __name__ == '__main__':
                     
                     empty_message_counter = 0
                     message_counter +=1
-                    if message_counter % 1000 == 0:
+                    if message_counter % 10000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"1000 messages processed in {interval.total_seconds()} seconds | Rate: {1000/interval.total_seconds()} message per second")
+                        logging.info(f"Last 10,000 messages processed in {round(interval.total_seconds(), 2)} seconds | Rate: {round(10000/interval.total_seconds(), 2)} message per second | Processed {message_counter} so far.")
                         start_time = now
 
                     logging.debug(f"Raw - {raw_message}")
