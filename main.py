@@ -116,7 +116,6 @@ def write_data_to_kinesis(messages):
     """
     Writes message to Kinesis stream
     """
-    logging.info(messages)
     put_response = kinesis_client.put_records(
         StreamName='Orbcomm-AIS',
         Records=messages,
