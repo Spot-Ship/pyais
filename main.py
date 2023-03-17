@@ -8,7 +8,6 @@ import certifi
 from os import environ, path
 import logging
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 import json
 
 # Context creation
@@ -25,21 +24,52 @@ supported_msg_types = ['1','2','3','4','5','18','19','27']
 session = boto3.Session()
 kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
 
+#In months
+threshold_for_eta_year_change = 3
+
+def leap_year_adjust(year, month, day):
+    if month == 2 and day == 29:
+        if year % 4 == 0:
+            return year
+        
+    return year
+
 def get_eta(message):
     """
     Deals with the dirty data from AIS to create an eta timestamp
     """
+    logging.debug(f"{message}")
     if message['month'] > 12:
         message['month'] = 0
     if message['day'] > 31:
         message['day'] = 0
-    if message['hour'] >= 24:
-        message['hour'] = 0
-    if message['minute'] >= 60:
-        message['minute'] = 0
-        
-    eta = datetime.today() + relativedelta(months=message['month'], days=message['day'], hours=message['hour'], minutes=message['minute'])
-    return str(int(eta.timestamp()))
+    if message['month'] == 0 or message['day'] == 0:
+        return "0"
+    
+    present = datetime.today()
+    year = present.year
+    if message['month'] < present.month - threshold_for_eta_year_change:
+        year += 1
+    if message['month'] == 2 and message['day'] == 29:
+        # check if current year is a leap year, if not add 1
+        if year % 4 != 0:
+            year += 1
+            # check if next year is a leap year, if not don't parse eta
+            if year % 4 != 0:
+                return "0"
+    
+    try:
+        if message['hour'] >= 24 or message['hour'] < 0:
+            eta = datetime(year, message['month'], message['day'])
+        elif message['minute'] >= 60 or message['minute'] < 0:
+            eta = datetime(year, message['month'], message['day'], message['hour'])
+        else:
+            eta = datetime(year, message['month'], message['day'], message['hour'], message['minute'])
+        logging.debug(f"ETA | {eta.strftime('%m/%d/%Y, %H:%M:%S')}")
+        return str(int(eta.timestamp()))
+    except Exception as error:
+        logging.warning(error)
+    return "0"
             
 
 def trimMessageForKinesis(message):
@@ -199,7 +229,6 @@ def filter_messages(message):
         raise Exception 
     
 
-
 def prep_message_for_decoding(message):
     if '!' in message:
         message_parts = message.split("!")
@@ -225,9 +254,11 @@ def decode_single_part_message(message):
 def prep_multipart_message_for_decoding(part):
     return prep_message_for_decoding(part).replace("\r\n","")
 
+
 def is_valid_multipart_part(part):
     return "AIVDM" in part
-               
+
+            
 def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
