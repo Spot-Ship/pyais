@@ -27,13 +27,6 @@ kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
 #In months
 threshold_for_eta_year_change = 3
 
-def leap_year_adjust(year, month, day):
-    if month == 2 and day == 29:
-        if year % 4 == 0:
-            return year
-        
-    return year
-
 def get_eta(message):
     """
     Deals with the dirty data from AIS to create an eta timestamp
