@@ -4,7 +4,7 @@
       "name": "orbcomm-ingester",
       "image": "756776684591.dkr.ecr.eu-west-2.amazonaws.com/orbcomm-ingester",
       "cpu": 2048,
-      "memory": 8024,
+      "memory": 8192,
       "links": [],
       "portMappings": [],
       "essential": true,
@@ -41,8 +41,8 @@
   "volumes": [],
   "placementConstraints": [],
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
+  "cpu": "2048",
+  "memory": "8192",
   "runtimePlatform": {
     "operatingSystemFamily": "LINUX"
   },
