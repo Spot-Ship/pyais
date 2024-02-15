@@ -289,7 +289,7 @@ def get_orbcomm_socket():
     ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
     ssl_context.check_hostname = False
     # Create an SSLSocket.                         
-    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9054))
+    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9063))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
     logging.debug('Established connection')
