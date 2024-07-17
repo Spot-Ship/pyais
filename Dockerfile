@@ -1,4 +1,4 @@
-FROM python:3.11.2-bullseye
+FROM python:3.11.9-bullseye
 ADD requirements.txt /
 RUN pip install -r requirements.txt
 ADD main.py /
