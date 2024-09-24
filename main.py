@@ -38,7 +38,7 @@ def get_eta(message):
         message['day'] = 0
     if message['month'] == 0 or message['day'] == 0:
         return "0"
-    
+
     present = datetime.today()
     year = present.year
     if message['month'] < present.month - threshold_for_eta_year_change:
@@ -50,7 +50,7 @@ def get_eta(message):
             # check if next year is a leap year, if not don't parse eta
             if year % 4 != 0:
                 return "0"
-    
+
     try:
         if message['hour'] >= 24 or message['hour'] < 0:
             eta = datetime(year, message['month'], message['day'])
@@ -63,11 +63,11 @@ def get_eta(message):
     except Exception as error:
         logging.warning(error)
     return "0"
-            
+
 
 def trimMessageForKinesis(message):
     if message['msg_type'] in [1,2,3]:
-        return { 
+        return {
             'msg_type': message['msg_type'],
             'mmsi': message['mmsi'],
             'lon': message['lon'],
@@ -133,7 +133,7 @@ def trimMessageForKinesis(message):
             '@type': 'position',
         }
     return {}
-    
+
 
 def write_data_to_kinesis(messages):
     """
@@ -219,8 +219,8 @@ def filter_messages(message):
         return prep_message_for_kinesis(message)
     except Exception as error:
         logging.error(error)
-        raise Exception 
-    
+        raise Exception
+
 
 def prep_message_for_decoding(message):
     if '!' in message:
@@ -241,7 +241,7 @@ def decode_single_part_message(message):
             logging.debug(f"AIS Decoded First - {decoded_message}")
             return decoded_message
         except Exception as error:
-            logging.error(f"Error occured decoding: {message} | Error Message | {error}") 
+            logging.error(f"Error occured decoding: {message} | Error Message | {error}")
 
 
 def prep_multipart_message_for_decoding(part):
@@ -251,7 +251,7 @@ def prep_multipart_message_for_decoding(part):
 def is_valid_multipart_part(part):
     return "AIVDM" in part
 
-            
+
 def decode_multipart_message(parts):
     """
     Decode multi-part AIS Messages
@@ -279,7 +279,7 @@ def checksum(nmea_string):
         calculated_checksum ^= ord(s)
     result = str(hex(calculated_checksum)).split("x")[1]
     return result
-    
+
 
 def get_orbcomm_socket():
     """
@@ -288,8 +288,8 @@ def get_orbcomm_socket():
     # Load the CA certificates used for validating the peer's certificate.
     ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
     ssl_context.check_hostname = False
-    # Create an SSLSocket.                         
-    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9063))
+    # Create an SSLSocket.
+    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9023))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
     logging.debug('Established connection')
@@ -324,7 +324,7 @@ if __name__ == '__main__':
     """
     while True:
         logging.info('Orbcomm Ingester Script Starting ...')
-        socket = get_orbcomm_socket() 
+        socket = get_orbcomm_socket()
         try:
             first_part_of_multipart_message, multipart_message = "", []
             start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
@@ -335,7 +335,7 @@ if __name__ == '__main__':
                     raw_message = socket.recv(4096)
                     if raw_message == "":
                         continue
-                    
+
                     encoded_message = raw_message.decode("utf-8")
                     if encoded_message =="":
                         empty_message_counter +=1
@@ -349,7 +349,7 @@ if __name__ == '__main__':
                                 messages = []
                             raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
                         continue
-                    
+
                     empty_message_counter = 0
                     message_counter +=1
                     if message_counter % 10000 == 0:
@@ -360,13 +360,13 @@ if __name__ == '__main__':
 
                     logging.debug(f"Raw - {raw_message}")
                     logging.debug(f"Decoded utf-8 - {encoded_message}")
-                    
+
                     # Check for multipart msgs
                     # N.B. This solution only deals with 2 part msgs.
                     if 'AIVDM,2,1' in encoded_message:
                         first_part_of_multipart_message = encoded_message
                         continue
-                    
+
                     # Check that we are dealing with the second part of a multipart msg.
                     # N.B. This solution only deals with 2 part msgs.
                     if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
@@ -377,11 +377,11 @@ if __name__ == '__main__':
                         first_part_of_multipart_message = ""
                     else:
                         decoded = decode_single_part_message(encoded_message)
-                    
+
                     prepped = filter_messages(decoded)
                     if prepped is not None:
                         messages.append(prepped)
-                    
+
                     #N.B. 500 is the max supported
                     if len(messages) >= 400:
                         write_data_to_kinesis(messages)
