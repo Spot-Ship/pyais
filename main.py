@@ -224,7 +224,8 @@ def filter_messages(message):
 
 def prep_message_for_decoding(message):
     if '!' in message:
-        message_parts = message.split("!")
+        message_parts = message.split("!", 1)
+        logging.debug(f"Pre Message - {message_parts[0]} | AIS Message - {message_parts[1]}")
         return '!' + str(message_parts[1])
     else:
         return '!' + message
@@ -241,7 +242,7 @@ def decode_single_part_message(message):
             logging.debug(f"AIS Decoded First - {decoded_message}")
             return decoded_message
         except Exception as error:
-            logging.error(f"Error occured decoding: {message} | Error Message | {error}")
+            logging.error(f"Error occured decoding single part message: {message} | Error Message | {error}")
 
 
 def prep_multipart_message_for_decoding(part):
@@ -263,7 +264,7 @@ def decode_multipart_message(parts):
         logging.debug(f"AIS Decoded Multipart - {decoded_ais_message}")
         return decoded_ais_message
     except Exception as error:
-        logging.error(f"Error occured decoding: {parts} | Error Message | {error}")
+        logging.error(f"Error occured decoding multi part message: {parts} | Error Message | {error}")
 
 
 def checksum(nmea_string):
@@ -289,7 +290,7 @@ def get_orbcomm_socket():
     ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
     ssl_context.check_hostname = False
     # Create an SSLSocket.
-    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9023))
+    client_socket = socket.create_connection(("globalais2.orbcomm.net", 9007))
     secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
     # Only connect, no handshake.
     logging.debug('Established connection')
@@ -328,7 +329,7 @@ if __name__ == '__main__':
         try:
             first_part_of_multipart_message, multipart_message = "", []
             start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
-            message_counter, empty_message_counter, messages = 0, 0, []
+            message_counter, empty_message_counter, obrcomm000_counter, orbcomm999_counter, messages = 0, 0, 0, 0, []
             # Loop through messages from Orbcomm Stream
             while True:
                 try:
@@ -351,11 +352,15 @@ if __name__ == '__main__':
                         continue
 
                     empty_message_counter = 0
+                    if "ORBCOMM000" in encoded_message:
+                        obrcomm000_counter +=1
+                    if "ORBCOMM999" in encoded_message:
+                        orbcomm999_counter +=1
                     message_counter +=1
                     if message_counter % 10000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"Last 10,000 messages processed in {round(interval.total_seconds(), 2)} seconds | Rate: {round(10000/interval.total_seconds(), 2)} message per second | Processed {message_counter} so far.")
+                        logging.info(f"Last 10,000 messages processed in {round(interval.total_seconds(), 2)} seconds | Rate: {round(10000/interval.total_seconds(), 2)} message per second | Processed {message_counter} so far | Orbcomm000: {obrcomm000_counter} | Orbcomm999: {orbcomm999_counter}.")
                         start_time = now
 
                     logging.debug(f"Raw - {raw_message}")
@@ -388,8 +393,8 @@ if __name__ == '__main__':
                         messages = []
                     continue
                 except Exception as error:
-                    logging.error(error)
+                    logging.error(f"Message Stream Error: {error}")
                     raise error
         except Exception as error:
-            logging.error(error)
+            logging.error(f"Main Loop Error: {error}")
             raise error
