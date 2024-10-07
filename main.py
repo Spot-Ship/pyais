@@ -11,39 +11,40 @@ from datetime import datetime, timedelta
 import json
 
 # Context creation
-ssl_context              = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-ssl_context.verify_mode  = ssl.CERT_REQUIRED
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+ssl_context.verify_mode = ssl.CERT_REQUIRED
 
 # Setup logger - https://docs.python.org/3/library/logging.html#levels
 log_level = environ.get("LOGLEVEL", logging.INFO)
-log_format = '[%(levelname)s] %(asctime)s - %(message)s'
+log_format = "[%(levelname)s] %(asctime)s - %(message)s"
 logging.basicConfig(level=log_level, format=log_format)
 
-supported_msg_types = ['1','2','3','4','5','18','19','27']
+supported_msg_types = ["1", "2", "3", "4", "5", "18", "19", "27"]
 
 session = boto3.Session()
-kinesis_client = boto3.client("kinesis", region_name='eu-west-2')
+kinesis_client = boto3.client("kinesis", region_name="eu-west-2")
 
-#In months
+# In months
 threshold_for_eta_year_change = 3
+
 
 def get_eta(message):
     """
     Deals with the dirty data from AIS to create an eta timestamp
     """
     logging.debug(f"{message}")
-    if message['month'] > 12:
-        message['month'] = 0
-    if message['day'] > 31:
-        message['day'] = 0
-    if message['month'] == 0 or message['day'] == 0:
+    if message["month"] > 12:
+        message["month"] = 0
+    if message["day"] > 31:
+        message["day"] = 0
+    if message["month"] == 0 or message["day"] == 0:
         return "0"
 
     present = datetime.today()
     year = present.year
-    if message['month'] < present.month - threshold_for_eta_year_change:
+    if message["month"] < present.month - threshold_for_eta_year_change:
         year += 1
-    if message['month'] == 2 and message['day'] == 29:
+    if message["month"] == 2 and message["day"] == 29:
         # check if current year is a leap year, if not add 1
         if year % 4 != 0:
             year += 1
@@ -52,12 +53,18 @@ def get_eta(message):
                 return "0"
 
     try:
-        if message['hour'] >= 24 or message['hour'] < 0:
-            eta = datetime(year, message['month'], message['day'])
-        elif message['minute'] >= 60 or message['minute'] < 0:
-            eta = datetime(year, message['month'], message['day'], message['hour'])
+        if message["hour"] >= 24 or message["hour"] < 0:
+            eta = datetime(year, message["month"], message["day"])
+        elif message["minute"] >= 60 or message["minute"] < 0:
+            eta = datetime(year, message["month"], message["day"], message["hour"])
         else:
-            eta = datetime(year, message['month'], message['day'], message['hour'], message['minute'])
+            eta = datetime(
+                year,
+                message["month"],
+                message["day"],
+                message["hour"],
+                message["minute"],
+            )
         logging.debug(f"ETA | {eta.strftime('%m/%d/%Y, %H:%M:%S')}")
         return str(int(eta.timestamp()))
     except Exception as error:
@@ -66,71 +73,71 @@ def get_eta(message):
 
 
 def trimMessageForKinesis(message):
-    if message['msg_type'] in [1,2,3]:
+    if message["msg_type"] in [1, 2, 3]:
         return {
-            'msg_type': message['msg_type'],
-            'mmsi': message['mmsi'],
-            'lon': message['lon'],
-            'lat': message['lat'],
-            'speed': message['speed'],
-            'course': message['course'],
-            'turn': message['turn'],
-            'status': message['status'],
-            'maneuver': message['maneuver'],
-            'heading': message['heading'],
-            'time': message['time'],
-            '@type': 'position',
+            "msg_type": message["msg_type"],
+            "mmsi": message["mmsi"],
+            "lon": message["lon"],
+            "lat": message["lat"],
+            "speed": message["speed"],
+            "course": message["course"],
+            "turn": message["turn"],
+            "status": message["status"],
+            "maneuver": message["maneuver"],
+            "heading": message["heading"],
+            "time": message["time"],
+            "@type": "position",
         }
-    if message['msg_type'] == 4:
+    if message["msg_type"] == 4:
         return {
-            'msg_type': message['msg_type'],
-            'mmsi': message['mmsi'],
-            'lon': message['lon'],
-            'lat': message['lat'],
-            'time': message['time'],
-            '@type': 'position',
+            "msg_type": message["msg_type"],
+            "mmsi": message["mmsi"],
+            "lon": message["lon"],
+            "lat": message["lat"],
+            "time": message["time"],
+            "@type": "position",
         }
-    if message['msg_type'] == 5:
+    if message["msg_type"] == 5:
         return {
-            'msg_type': message['msg_type'],
-            'mmsi': message['mmsi'],
-            'imo': message['imo'],
-            'ship_type': message['ship_type'],
-            'shipname': message['shipname'],
-            'callsign': message['callsign'],
-            'to_bow': message['to_bow'],
-            'to_stern': message['to_stern'],
-            'to_port': message['to_port'],
-            'to_starboard': message['to_starboard'],
-            'draught': message['draught'],
-            'eta': message['eta'],
-            'destination': message['destination'],
-            'time': message['time'],
-            '@type': 'status',
+            "msg_type": message["msg_type"],
+            "mmsi": message["mmsi"],
+            "imo": message["imo"],
+            "ship_type": message["ship_type"],
+            "shipname": message["shipname"],
+            "callsign": message["callsign"],
+            "to_bow": message["to_bow"],
+            "to_stern": message["to_stern"],
+            "to_port": message["to_port"],
+            "to_starboard": message["to_starboard"],
+            "draught": message["draught"],
+            "eta": message["eta"],
+            "destination": message["destination"],
+            "time": message["time"],
+            "@type": "status",
         }
-    if message['msg_type'] in [18,19]:
+    if message["msg_type"] in [18, 19]:
         return {
-            'msg_type': message['msg_type'],
-            'mmsi': message['mmsi'],
-            'lon': message['lon'],
-            'lat': message['lat'],
-            'speed': message['speed'],
-            'course': message['course'],
-            'heading': message['heading'],
-            'time': message['time'],
-            '@type': 'position',
+            "msg_type": message["msg_type"],
+            "mmsi": message["mmsi"],
+            "lon": message["lon"],
+            "lat": message["lat"],
+            "speed": message["speed"],
+            "course": message["course"],
+            "heading": message["heading"],
+            "time": message["time"],
+            "@type": "position",
         }
-    if message['msg_type'] == 27:
+    if message["msg_type"] == 27:
         return {
-            'msg_type': message['msg_type'],
-            'mmsi': message['mmsi'],
-            'lon': message['lon'],
-            'lat': message['lat'],
-            'speed': message['speed'],
-            'course': message['course'],
-            'status': message['status'],
-            'time': message['time'],
-            '@type': 'position',
+            "msg_type": message["msg_type"],
+            "mmsi": message["mmsi"],
+            "lon": message["lon"],
+            "lat": message["lat"],
+            "speed": message["speed"],
+            "course": message["course"],
+            "status": message["status"],
+            "time": message["time"],
+            "@type": "position",
         }
     return {}
 
@@ -140,10 +147,10 @@ def write_data_to_kinesis(messages):
     Writes message to Kinesis stream
     """
     put_response = kinesis_client.put_records(
-        StreamName='Orbcomm-AIS',
+        StreamName="Orbcomm-AIS",
         Records=messages,
     )
-    if put_response['FailedRecordCount'] > 0:
+    if put_response["FailedRecordCount"] > 0:
         logging.error(f"Failed to process {put_response['FailedRecordCount']}")
     return put_response
 
@@ -152,7 +159,7 @@ def get_type(msg_type):
     """
     Get which type the message is deserialised as
     """
-    if msg_type in [1,2,3,4,18,19,27]:
+    if msg_type in [1, 2, 3, 4, 18, 19, 27]:
         return "position"
     if msg_type == 5:
         return "status"
@@ -164,47 +171,47 @@ def prep_message_for_kinesis(message):
     Filters & preps for Kinesis.
     """
     try:
-        message['time'] = round(time.time())
+        message["time"] = round(time.time())
     except:
         pass
     try:
-        message['@type'] = get_type(message['msg_type'])
+        message["@type"] = get_type(message["msg_type"])
     except:
         pass
-    if message['msg_type'] in [1,2,3,27]:
+    if message["msg_type"] in [1, 2, 3, 27]:
         try:
-            message['status'] = int(f"{message['status']}")
+            message["status"] = int(f"{message['status']}")
         except:
             pass
-        if message['msg_type'] in [1,2,3]:
+        if message["msg_type"] in [1, 2, 3]:
             try:
-                message['maneuver'] = int(f"{message['maneuver']}")
+                message["maneuver"] = int(f"{message['maneuver']}")
             except:
                 pass
             try:
-                if (message['turn']) == -0.0:
-                    message['turn'] = 0.0
-                if (f"{message['turn']}" == "TurnRate.NO_TI_DEFAULT"):
-                    message['turn'] = -128.0
-                elif (f"{message['turn']}" == "TurnRate.NO_TI_LEFT"):
-                    message['turn'] = -127.0
-                elif (f"{message['turn']}" == "TurnRate.NO_TI_RIGHT"):
-                    message['turn'] = 127.0
-                elif ("TurnRate.NO_TI_" in f"{message['turn']}"):
-                    message['turn'] = 0.0
+                if (message["turn"]) == -0.0:
+                    message["turn"] = 0.0
+                if f"{message['turn']}" == "TurnRate.NO_TI_DEFAULT":
+                    message["turn"] = -128.0
+                elif f"{message['turn']}" == "TurnRate.NO_TI_LEFT":
+                    message["turn"] = -127.0
+                elif f"{message['turn']}" == "TurnRate.NO_TI_RIGHT":
+                    message["turn"] = 127.0
+                elif "TurnRate.NO_TI_" in f"{message['turn']}":
+                    message["turn"] = 0.0
             except:
                 pass
-    if message['msg_type'] in [5]:
+    if message["msg_type"] in [5]:
         try:
-            message['eta'] = get_eta(message)
+            message["eta"] = get_eta(message)
         except:
             pass
         try:
-            message['ship_type'] = int(f"{message['ship_type']}")
+            message["ship_type"] = int(f"{message['ship_type']}")
         except:
             pass
     return {
-        "Data" : json.dumps(trimMessageForKinesis(message)),
+        "Data": json.dumps(trimMessageForKinesis(message)),
         "PartitionKey": f"${message['mmsi']}${message['msg_type']}${message['time']}",
     }
 
@@ -213,7 +220,7 @@ def filter_messages(message):
     """
     Checks decoded message is of a type we care about & sends it to process it.
     """
-    if message is None or str(message['msg_type']) not in supported_msg_types:
+    if message is None or str(message["msg_type"]) not in supported_msg_types:
         return None
     try:
         return prep_message_for_kinesis(message)
@@ -223,12 +230,14 @@ def filter_messages(message):
 
 
 def prep_message_for_decoding(message):
-    if '!' in message:
+    if "!" in message:
         message_parts = message.split("!", 1)
-        logging.debug(f"Pre Message - {message_parts[0]} | AIS Message - {message_parts[1]}")
-        return '!' + str(message_parts[1])
+        logging.debug(
+            f"Pre Message - {message_parts[0]} | AIS Message - {message_parts[1]}"
+        )
+        return "!" + str(message_parts[1])
     else:
-        return '!' + message
+        return "!" + message
 
 
 def decode_single_part_message(message):
@@ -242,11 +251,13 @@ def decode_single_part_message(message):
             logging.debug(f"AIS Decoded First - {decoded_message}")
             return decoded_message
         except Exception as error:
-            logging.error(f"Error occured decoding single part message: {message} | Error Message | {error}")
+            logging.error(
+                f"Error occured decoding single part message: {message} | Error Message | {error}"
+            )
 
 
 def prep_multipart_message_for_decoding(part):
-    return prep_message_for_decoding(part).replace("\r\n","")
+    return prep_message_for_decoding(part).replace("\r\n", "")
 
 
 def is_valid_multipart_part(part):
@@ -258,13 +269,17 @@ def decode_multipart_message(parts):
     Decode multi-part AIS Messages
     """
     try:
-        multipart_message = filter(is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts))
+        multipart_message = filter(
+            is_valid_multipart_part, map(prep_multipart_message_for_decoding, parts)
+        )
         logging.debug(f"Raw Multipart - {multipart_message}")
         decoded_ais_message = decode(*multipart_message).asdict()
         logging.debug(f"AIS Decoded Multipart - {decoded_ais_message}")
         return decoded_ais_message
     except Exception as error:
-        logging.error(f"Error occured decoding multi part message: {parts} | Error Message | {error}")
+        logging.error(
+            f"Error occured decoding multi part message: {parts} | Error Message | {error}"
+        )
 
 
 def checksum(nmea_string):
@@ -272,9 +287,10 @@ def checksum(nmea_string):
     Create Checksum from nmea_string
     """
     import re
+
     if re.search("\n$", nmea_string):
         nmea_string = nmea_string[:-1]
-    nmea_data,_ = re.split('\*', nmea_string)
+    nmea_data, _ = re.split("\*", nmea_string)
     calculated_checksum = 0
     for s in nmea_data:
         calculated_checksum ^= ord(s)
@@ -287,13 +303,18 @@ def get_orbcomm_socket():
     Connect via SSL to Orbcomm websocket
     """
     # Load the CA certificates used for validating the peer's certificate.
-    ssl_context.load_verify_locations(cafile=path.relpath(certifi.where()),capath=None, cadata=None)
+    ssl_context.load_verify_locations(
+        cafile=path.relpath(certifi.where()), capath=None, cadata=None
+    )
     ssl_context.check_hostname = False
     # Create an SSLSocket.
     client_socket = socket.create_connection(("globalais2.orbcomm.net", 9007))
-    secure_client_socket = ssl_context.wrap_socket(client_socket, do_handshake_on_connect=False, )
+    secure_client_socket = ssl_context.wrap_socket(
+        client_socket,
+        do_handshake_on_connect=False,
+    )
     # Only connect, no handshake.
-    logging.debug('Established connection')
+    logging.debug("Established connection")
     # Explicit handshake.
     secure_client_socket.do_handshake()
     logging.debug("Complete SSL handshake")
@@ -301,35 +322,43 @@ def get_orbcomm_socket():
     # server_certificate = secure_client_socket.getpeercert()
     # logging.debug("Certificate obtained from the server:")
     # logging.debug(server_certificate)
-    # TODO move these to envVar
-    username= "SSEH_Lss"
-    password= "tpWB3UkPnoF2"
+    # TODO move these to envVar
+    username = "SSEH_Lss"
+    password = "tpWB3UkPnoF2"
     try:
-        nmea_string = "$PMWLSS,{},5,{},{},1*".format(time,username,password)
+        nmea_string = "$PMWLSS,{},5,{},{},1*".format(time, username, password)
         checksum_string = nmea_string[1:]
         package = "{}{}\r\n".format(nmea_string, checksum(checksum_string))
         bytes = bytearray()
-        bytes.extend(package.encode('utf-8'))
+        bytes.extend(package.encode("utf-8"))
         secure_client_socket.send(bytes)
     except Exception as error:
         logging.warning(error)
     return secure_client_socket
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     Main Thread:
-        Connects to Orbcomm websocket, 
+        Connects to Orbcomm websocket,
         Decodes AIS messages,
         Sends relevant data to Kinesis.
     """
     while True:
-        logging.info('Orbcomm Ingester Script Starting ...')
+        logging.info("Orbcomm Ingester Script Starting ...")
         socket = get_orbcomm_socket()
         try:
             first_part_of_multipart_message, multipart_message = "", []
-            start_time = time_of_first_encountered_empty_message = time_to_throw_an_exception = datetime.today();
-            message_counter, empty_message_counter, obrcomm000_counter, orbcomm999_counter, messages = 0, 0, 0, 0, []
+            start_time = time_of_first_encountered_empty_message = (
+                time_to_throw_an_exception
+            ) = datetime.today()
+            (
+                message_counter,
+                empty_message_counter,
+                obrcomm000_counter,
+                orbcomm999_counter,
+                messages,
+            ) = (0, 0, 0, 0, [])
             # Loop through messages from Orbcomm Stream
             while True:
                 try:
@@ -338,29 +367,39 @@ if __name__ == '__main__':
                         continue
 
                     encoded_message = raw_message.decode("utf-8")
-                    if encoded_message =="":
-                        empty_message_counter +=1
+                    if encoded_message == "":
+                        empty_message_counter += 1
                         if empty_message_counter == 1:
-                            time_of_first_encountered_empty_message = datetime.today();
-                            time_to_throw_an_exception = time_of_first_encountered_empty_message + timedelta(seconds=5)
-                        if empty_message_counter > 1 and time_to_throw_an_exception < datetime.today():
+                            time_of_first_encountered_empty_message = datetime.today()
+                            time_to_throw_an_exception = (
+                                time_of_first_encountered_empty_message
+                                + timedelta(seconds=5)
+                            )
+                        if (
+                            empty_message_counter > 1
+                            and time_to_throw_an_exception < datetime.today()
+                        ):
                             # Clean up backlog before erroring out
                             if len(messages) > 0:
                                 write_data_to_kinesis(messages)
                                 messages = []
-                            raise Exception(f"Something interrupted the stream since: {time_of_first_encountered_empty_message}")
+                            raise Exception(
+                                f"Something interrupted the stream since: {time_of_first_encountered_empty_message}"
+                            )
                         continue
 
                     empty_message_counter = 0
                     if "ORBCOMM000" in encoded_message:
-                        obrcomm000_counter +=1
+                        obrcomm000_counter += 1
                     if "ORBCOMM999" in encoded_message:
-                        orbcomm999_counter +=1
-                    message_counter +=1
+                        orbcomm999_counter += 1
+                    message_counter += 1
                     if message_counter % 10000 == 0:
                         now = datetime.today()
                         interval = now - start_time
-                        logging.info(f"Last 10,000 messages processed in {round(interval.total_seconds(), 2)} seconds | Rate: {round(10000/interval.total_seconds(), 2)} message per second | Processed {message_counter} so far | Orbcomm000: {obrcomm000_counter} | Orbcomm999: {orbcomm999_counter}.")
+                        logging.info(
+                            f"Last 10,000 messages processed in {round(interval.total_seconds(), 2)} seconds | Rate: {round(10000/interval.total_seconds(), 2)} message per second | Processed {message_counter} so far | Orbcomm000: {obrcomm000_counter} | Orbcomm999: {orbcomm999_counter}."
+                        )
                         start_time = now
 
                     logging.debug(f"Raw - {raw_message}")
@@ -368,16 +407,24 @@ if __name__ == '__main__':
 
                     # Check for multipart msgs
                     # N.B. This solution only deals with 2 part msgs.
-                    if 'AIVDM,2,1' in encoded_message:
+                    if "AIVDM,2,1" in encoded_message:
                         first_part_of_multipart_message = encoded_message
                         continue
 
                     # Check that we are dealing with the second part of a multipart msg.
                     # N.B. This solution only deals with 2 part msgs.
-                    if first_part_of_multipart_message != "" and 'AIVDM,2,2' in encoded_message:
-                        logging.debug(f"First part  - {first_part_of_multipart_message}")
+                    if (
+                        first_part_of_multipart_message != ""
+                        and "AIVDM,2,2" in encoded_message
+                    ):
+                        logging.debug(
+                            f"First part  - {first_part_of_multipart_message}"
+                        )
                         logging.debug(f"Second part - {encoded_message}")
-                        multipart_message = [first_part_of_multipart_message, encoded_message]
+                        multipart_message = [
+                            first_part_of_multipart_message,
+                            encoded_message,
+                        ]
                         decoded = decode_multipart_message(multipart_message)
                         first_part_of_multipart_message = ""
                     else:
@@ -387,7 +434,7 @@ if __name__ == '__main__':
                     if prepped is not None:
                         messages.append(prepped)
 
-                    #N.B. 500 is the max supported
+                    # N.B. 500 is the max supported
                     if len(messages) >= 400:
                         write_data_to_kinesis(messages)
                         messages = []
