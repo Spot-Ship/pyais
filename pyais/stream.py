@@ -109,9 +109,13 @@ class AssembleMessages(ABC):
     Offers a iterator like interface.
     """
 
-    def __init__(self, tbq: typing.Optional[TagBlockQueue] = None) -> None:
+    def __init__(
+            self,
+            tbq: typing.Optional[TagBlockQueue] = None,
+            ignore_exceptions: bool = True) -> None:
         self.wrapper_msg: typing.Optional[GatehouseSentence] = None
         self.tbq: typing.Optional[TagBlockQueue] = tbq
+        self.ignore_exceptions = ignore_exceptions
 
     def __enter__(self) -> "AssembleMessages":
         # Enables use of with statement
@@ -160,9 +164,12 @@ class AssembleMessages(ABC):
                     sentence = cast(GatehouseSentence, sentence)
                     self.__set_last_wrapper_msg(sentence)
                     continue
-            except (InvalidNMEAMessageException, NonPrintableCharacterException, UnknownMessageException):
-                # Be gentle and just skip invalid messages
-                continue
+            except (InvalidNMEAMessageException, NonPrintableCharacterException,
+                    UnknownMessageException) as e:
+                if self.ignore_exceptions:
+                    continue
+                else:
+                    raise e
 
             if not sentence.TYPE == AISSentence.TYPE:
                 continue
@@ -236,14 +243,15 @@ class Stream(AssembleMessages, Generic[F], ABC):
     def __init__(
         self, fobj: F,
         preprocessor: typing.Optional[PreprocessorProtocol] = None,
-        tbq: typing.Optional[TagBlockQueue] = None
+        tbq: typing.Optional[TagBlockQueue] = None,
+        ignore_exceptions: bool = True
     ) -> None:
         """
         Create a new Stream-like object.
         @param fobj: A file-like or socket object.
         @param preprocessor: An optional preprocessor
         """
-        super().__init__(tbq=tbq)
+        super().__init__(tbq=tbq, ignore_exceptions=ignore_exceptions)
         self._fobj: F = fobj
         self.preprocessor = preprocessor
 
