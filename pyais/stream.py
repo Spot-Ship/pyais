@@ -109,13 +109,9 @@ class AssembleMessages(ABC):
     Offers a iterator like interface.
     """
 
-    def __init__(
-            self,
-            tbq: typing.Optional[TagBlockQueue] = None,
-            ignore_exceptions: bool = True) -> None:
+    def __init__(self, tbq: typing.Optional[TagBlockQueue] = None) -> None:
         self.wrapper_msg: typing.Optional[GatehouseSentence] = None
         self.tbq: typing.Optional[TagBlockQueue] = tbq
-        self.ignore_exceptions = ignore_exceptions
 
     def __enter__(self) -> "AssembleMessages":
         # Enables use of with statement
@@ -244,16 +240,17 @@ class Stream(AssembleMessages, Generic[F], ABC):
         self, fobj: F,
         preprocessor: typing.Optional[PreprocessorProtocol] = None,
         tbq: typing.Optional[TagBlockQueue] = None,
-        ignore_exceptions: bool = True
+        ignore_exceptions = True
     ) -> None:
         """
         Create a new Stream-like object.
         @param fobj: A file-like or socket object.
         @param preprocessor: An optional preprocessor
         """
-        super().__init__(tbq=tbq, ignore_exceptions=ignore_exceptions)
+        super().__init__(tbq=tbq)
         self._fobj: F = fobj
         self.preprocessor = preprocessor
+        self.ignore_exceptions = ignore_exceptions
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         self.close()
@@ -284,9 +281,10 @@ class BinaryIOStream(Stream[BinaryIO]):
         self,
         file: BinaryIO,
         preprocessor: typing.Optional[PreprocessorProtocol] = None,
-        tbq: typing.Optional[TagBlockQueue] = None
+        tbq: typing.Optional[TagBlockQueue] = None,
+        ignore_exceptions: bool = True
     ) -> None:
-        super().__init__(file, preprocessor=preprocessor, tbq=tbq)
+        super().__init__(file, preprocessor=preprocessor, tbq=tbq, ignore_exceptions=ignore_exceptions)
 
     def read(self) -> Generator[bytes, None, None]:
         yield from self._fobj
@@ -302,7 +300,8 @@ class FileReaderStream(BinaryIOStream):
         filename: typing.Union[str, pathlib.Path],
         mode: str = "rb",
         preprocessor: typing.Optional[PreprocessorProtocol] = None,
-        tbq: typing.Optional[TagBlockQueue] = None
+        tbq: typing.Optional[TagBlockQueue] = None,
+        ignore_exceptions: bool = True
     ) -> None:
         self.filename: typing.Union[str, pathlib.Path] = filename
         self.mode: str = mode
@@ -312,7 +311,7 @@ class FileReaderStream(BinaryIOStream):
             file = cast(BinaryIO, file)
         except Exception as e:
             raise FileNotFoundError(f"Could not open file {self.filename}") from e
-        super().__init__(file, preprocessor=preprocessor, tbq=tbq)
+        super().__init__(file, preprocessor=preprocessor, tbq=tbq, ignore_exceptions=ignore_exceptions)
 
 
 class ByteStream(Stream[None]):
